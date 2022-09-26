@@ -31,6 +31,7 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.robots.articulations.rover import Rover
 
 from omni.isaac.core.articulations import ArticulationView
+from omniisaacgymenvs.robots.articulations.views.rover_view import RoverView
 from omni.isaac.core.utils.prims import get_prim_at_path
 
 import numpy as np
@@ -66,6 +67,8 @@ class RoverTask(RLTask):
         self._ball_position = torch.tensor([0, 0, 1.0])
 
 
+        # self._vel_indicies = torch.zeros((self.num_envs, 6), device=self.device, dtype=torch.float32)
+        # self._pos_indicies = torch.zeros((self.num_envs, 6), device=self.device, dtype=torch.float32)
         
 
         RLTask.__init__(self, name, env)
@@ -74,8 +77,9 @@ class RoverTask(RLTask):
     def set_up_scene(self, scene) -> None:
         self.get_cartpole()
         super().set_up_scene(scene)
-        self._cartpoles = ArticulationView(prim_paths_expr="/World/envs/.*/Rover", name="cartpole_view")
-        scene.add(self._cartpoles)
+        self._rover = RoverView(prim_paths_expr="/World/envs/.*/Rover", name="cartpole_view")
+        scene.add(self._rover)
+        #self._rover.initialize()
         return
 
     def get_cartpole(self):
@@ -83,18 +87,18 @@ class RoverTask(RLTask):
         # applies articulation settings from the task configuration yaml file
         self._sim_config.apply_articulation_settings("Rover", get_prim_at_path(cartpole.prim_path), self._sim_config.parse_actor_config("Rover"))
 
-    def get_target(self):
-        radius = 0.1
-        color = torch.tensor([1, 0, 0])
-        ball = DynamicSphere(
-            prim_path=self.default_zero_env_path + "/ball", 
-            translation=self._ball_position, 
-            name="target_0",
-            radius=radius,
-            color=color,
-        )
-        self._sim_config.apply_articulation_settings("ball", get_prim_at_path(ball.prim_path), self._sim_config.parse_actor_config("ball"))
-        ball.set_collision_enabled(False)
+    # def get_target(self):
+    #     radius = 0.1
+    #     color = torch.tensor([1, 0, 0])
+    #     ball = DynamicSphere(
+    #         prim_path=self.default_zero_env_path + "/ball", 
+    #         translation=self._ball_position, 
+    #         name="target_0",
+    #         radius=radius,
+    #         color=color,
+    #     )
+    #     self._sim_config.apply_articulation_settings("ball", get_prim_at_path(ball.prim_path), self._sim_config.parse_actor_config("ball"))
+    #     ball.set_collision_enabled(False)
 
 
     def get_observations(self) -> dict:
@@ -120,7 +124,15 @@ class RoverTask(RLTask):
         # return observations
 
     def pre_physics_step(self, actions) -> None:
-        pass
+        reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        if len(reset_env_ids) > 0:
+            self.reset_idx(reset_env_ids)
+        
+        #actions = actions.to(self._device)
+        velocities = torch.zeros((self._rover.count, 6), dtype=torch.float32, device=self._device)
+        #forces = torch.zeros((self._rover.count, 1), dtype=torch.float32, device=self._device)
+
+        velocities[:, 0] = 45
         # reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         # if len(reset_env_ids) > 0:
         #     self.reset_idx(reset_env_ids)
@@ -133,11 +145,16 @@ class RoverTask(RLTask):
         #indices = torch.arange(self._cartpoles.count, dtype=torch.int32, device=self._device)
         #self._cartpoles.set_joint_positions(forces, indices=indices)
 
+
+        #print(self._rover.actuated_vel_indices)
+        self._rover.set_joint_position_targets(velocities,indices=None,joint_indices=self._rover.actuated_pos_indices)
+        #self._rover.set_joint_velocities()
+
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
 
         # # randomize DOF positions
-        dof_pos = torch.zeros((num_resets, self._cartpoles.num_dof), device=self._device)
+        dof_pos = torch.zeros((num_resets, self._rover.num_dof), device=self._device)
         # dof_pos[:, self._cart_dof_idx] = 1.0 * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
         # dof_pos[:, self._pole_dof_idx] = 0.125 * math.pi * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
 
