@@ -28,10 +28,10 @@
 
 
 def initialize_task(config, env, init_sim=True):
-    from omniisaacgymenvs.tasks.exomy import ExomyTask
+    from omniisaacgymenvs.tasks.rover import RoverTask
     # Mappings from strings to environments
     task_map = {
-        "Exomy": ExomyTask,
+        "Rover": RoverTask,
     }
 
     from .config_utils.sim_config import SimConfig
