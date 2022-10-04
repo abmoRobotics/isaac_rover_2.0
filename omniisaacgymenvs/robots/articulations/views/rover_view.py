@@ -19,6 +19,8 @@ class RoverView(ArticulationView):
         self._actuated_dof_indices = list()
         self._actuated_pos_indices = list()
         self._actuated_vel_indices = list()
+        self._num_pos_dof = 6
+        self._num_vel_dof = 6
 
     @property
     def actuated_dof_indices(self):
@@ -27,6 +29,8 @@ class RoverView(ArticulationView):
     def actuated_pos_indices(self):
         return self._actuated_pos_indices
 
+    
+
     @property
     def actuated_vel_indices(self):
         return self._actuated_vel_indices
@@ -34,8 +38,10 @@ class RoverView(ArticulationView):
     def initialize(self, physics_sim_view):
         super().initialize(physics_sim_view)
         self._actuated_dof_indices = [i for i in range(self.num_dof)]
-        self._actuated_vel_indices = [2,4,7,9,12,14]
-        self._actuated_pos_indices = [1,3,6,8,11,13]
+        # self._actuated_vel_indices = [9,10,11,12,13,14] exomy
+        # self._actuated_pos_indices = [3,4,5,6,7,8] exomy
+        self._actuated_vel_indices = [10, 11, 14, 7, 8, 13] #[FR, CR, RR, FL, CL, RL]
+        self._actuated_pos_indices = [5, 12, 3, 9]#[FR ,RR, FL, RL]
         print("Initializing123")
         print(self._actuated_dof_indices)
         # self.physics_rotors = [RigidPrimView(prim_paths_expr=f"/World/envs/.*/Ingenuity/rotor_physics_{i}", name=f"physics_rotor_{i}_view", reset_xform_properties=False) for i in range(2)]

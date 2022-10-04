@@ -61,14 +61,15 @@ class Rover(Robot):
             #self._usd_path ="/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Projects/usd/exomy/exomy_model/cartpole.usd" #"http://localhost:8080/omniverse://100.127.177.125/Projects/usd/exomy/exomy_model/Cartpole.usd"#"./cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"#/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"
             #self._usd_path = assets_root_path + "/Projects/usd/exomy/exomy_model/exomy_model3.usd"
             #self._usd_path = assets_root_path + "/Projects/exomy/exomy_model3.usd"
-            #self._usd_path = "http://127.0.0.1:8080/omniverse://127.0.0.1/Projects/rover/MarsRover2.usd"
-            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/TEST2.usd"
-        
+            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/Mars_Rover_2_COPY7.usd"
+            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/exomy_model.usd"
+            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/mars_rover_2_working.usd"
+
         print("hej")
         print(self._usd_path)
         print(prim_path)
-        add_reference_to_stage(self._usd_path, prim_path)
-        print("hej")
+        add_reference_to_stage(self._usd_path, prim_path)   
+        print("hej") 
         print(self._usd_path)
         print(prim_path)
         super().__init__(
