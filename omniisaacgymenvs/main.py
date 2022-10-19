@@ -16,7 +16,7 @@ env.set_task(task, backend="torch")
 import torch
 import torch.nn as nn
 
-# Import the skrl components to build the RL system
+# Import the skrl components to build the RL systemd
 from skrl.models.torch import Model, GaussianMixin, DeterministicMixin
 from skrl.memories.torch import RandomMemory
 from skrl.agents.torch.ppo import PPO, PPO_DEFAULT_CONFIG
