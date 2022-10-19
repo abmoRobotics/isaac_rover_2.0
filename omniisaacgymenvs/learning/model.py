@@ -1,6 +1,8 @@
 
-from skrl.models.torch import GaussianModel
-from skrl.models.torch import DeterministicModel
+from ast import Mod
+from xml.parsers.expat import model
+from skrl.models.torch import GaussianMixin, Model
+from skrl.models.torch import DeterministicMixin
 from skrl.utils.model_instantiators import deterministic_model, Shape
 import torch.nn as nn
 import torch
@@ -25,9 +27,12 @@ class Layer(nn.Module):
         return self.conv(x)
 
 
-class StochasticActorHeightmap(GaussianModel):
-    def __init__(self, observation_space, action_space, num_exteroception=1080, device = "cuda:0", network_features=[512,256,128], encoder_features=[80,60], activation_function="relu",clip_actions=False, clip_log_std = True, min_log_std= -20.0, max_log_std = 2.0):
-        super().__init__(observation_space, action_space, device, clip_actions)
+class StochasticActorHeightmap(GaussianMixin, Model):
+    def __init__(self, observation_space, action_space, num_exteroception=0, device = "cuda:0", network_features=[512,256,128], encoder_features=[80,60], activation_function="relu",clip_actions=False, clip_log_std = True, min_log_std= -20.0, max_log_std = 2.0, reduction="sum"):
+        #super().__init__(observation_space, action_space, device, clip_actions)
+        Model.__init__(self, observation_space, action_space, device)
+        GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
+
         self.num_exteroception = num_exteroception  # External information (Heightmap)
         self.num_proprioception = observation_space.shape[0] - self.num_exteroception 
         self.network = nn.ModuleList()  # MLP for network
@@ -60,9 +65,12 @@ class StochasticActorHeightmap(GaussianModel):
         return x, self.log_std_parameter
 
 
-class DeterministicHeightmap(DeterministicModel):
-    def __init__(self, observation_space, action_space, num_exteroception=1080, device = "cuda:0", network_features=[128,64], encoder_features=[80,60], activation_function="relu", clip_actions=False):
-        super().__init__(observation_space, action_space, device, clip_actions)
+class DeterministicHeightmap(DeterministicMixin, Model):
+    def __init__(self, observation_space, action_space, num_exteroception=0, device = "cuda:0", network_features=[128,64], encoder_features=[80,60], activation_function="relu", clip_actions=False):
+        #super().__init__(observation_space, action_space, device, clip_actions)
+        Model.__init__(self, observation_space, action_space, device)
+        DeterministicMixin.__init__(self, clip_actions)
+        
         self.num_exteroception = num_exteroception  # External information (Heightmap)
         self.num_proprioception = observation_space.shape[0] - self.num_exteroception 
         self.network = nn.ModuleList()  # MLP for network
@@ -91,3 +99,4 @@ class DeterministicHeightmap(DeterministicModel):
         for layer in self.network:
             x = layer(x)
         return x
+

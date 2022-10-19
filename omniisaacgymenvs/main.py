@@ -1,16 +1,18 @@
 import threading
-
+from skrl.envs.torch import wrap_env
+from skrl.envs.torch import load_omniverse_isaacgym_env
 
 # Omniverse Isaac Sim tutorial: Creating New RL Environment 
 # https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/tutorial_gym_new_rl_example.html
 
 # Instance of VecEnvBase and create the task
-from omni.isaac.gym.vec_env import VecEnvBase
-env = VecEnvBase(headless=True)
+# from omni.isaac.gym.vec_env import VecEnvBase
+# env = VecEnvBase(headless=True)
 
-from rover_task import RoverTask
-task = RoverTask(name="Rover")
-env.set_task(task, backend="torch")
+# from tasks.rover import RoverTask
+# task = RoverTask(name="Rover")
+env = load_omniverse_isaacgym_env(task_name="Rover")
+env = wrap_env(env)
 
 
 import torch

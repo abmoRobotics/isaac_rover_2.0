@@ -158,7 +158,8 @@ class RoverTask(RLTask):
         pass
 
     def pre_physics_step(self, actions) -> None:
-
+        print(self._rover.get_default_state()[0])
+        #print()
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
