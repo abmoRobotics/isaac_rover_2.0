@@ -6,7 +6,7 @@ physics_engine: ${..physics_engine}
 # if given, will override the device setting in gym. 
 env:
   numEnvs: ${resolve_default:64,${...num_envs}}
-  envSpacing: 3.0
+  envSpacing: 1
   resetDist: 3.0
   maxEffort: 400.0
 
@@ -14,12 +14,27 @@ env:
   clipActions: 1.0
   controlFrequencyInv: 5 # 60 Hz
 
+  terrain:
+    staticFriction: 1.0  # [-]
+    dynamicFriction: 1.0  # [-]
+    restitution: 0.        # [-]
+    # rough terrain only:
+    curriculum: False
+    maxInitMapLevel: 0
+    mapLength: 8.
+    mapWidth: 8.
+    numLevels: 10
+    numTerrains: 20
+    # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
+    terrainProportions: [0.1, 0.1, 0.30, 0.30, 0.2]
+    # tri mesh only:
+    slopeTreshold: 0.5
 sim:
-  dt: 0.03 #0.0083 # 1/120 s
+  dt: 0.01 #0.0083 # 1/120 s
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   up_axis: "z"
   gravity: [0.0, 0.0, -9.81]
-  add_ground_plane: True
+  add_ground_plane: False
   add_distant_light: True
   use_flatcache : True
   enable_scene_query_support: False
@@ -37,7 +52,7 @@ sim:
     solver_velocity_iteration_count: 0
     contact_offset: 0.02
     rest_offset: 0.01
-    bounce_threshold_velocity: 0.2
+    bounce_threshold_velocity: 10
     friction_offset_threshold: 0.04
     friction_correlation_distance: 0.025
     enable_sleeping: True

@@ -1,8 +1,7 @@
 from cmath import pi, sqrt
 import numpy as np
 import math
-from isaacgym import gymutil, gymapi
-from isaacgym.terrain_utils import *
+#from isaacgym.terrain_utils import *
 from scipy.stats import qmc
 import pymeshlab
 import random

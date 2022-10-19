@@ -370,6 +370,7 @@ def add_terrain_to_stage(stage, vertices, triangles, position=None, orientation=
     terrain_mesh.GetAttribute("points").Set(vertices)
     terrain_mesh.GetAttribute("faceVertexIndices").Set(triangles.flatten())
     terrain_mesh.GetAttribute("faceVertexCounts").Set(np.asarray([3]*num_faces))
+    
 
     terrain = XFormPrim(prim_path="/World/terrain",
                         name="terrain",
@@ -380,8 +381,8 @@ def add_terrain_to_stage(stage, vertices, triangles, position=None, orientation=
     # collision_api = UsdPhysics.MeshCollisionAPI.Apply(terrain.prim)
     # collision_api.CreateApproximationAttr().Set("meshSimplification")
     physx_collision_api = PhysxSchema.PhysxCollisionAPI.Apply(terrain.prim)
-    physx_collision_api.GetContactOffsetAttr().Set(0.02)
-    physx_collision_api.GetRestOffsetAttr().Set(0.00)
+    physx_collision_api.GetContactOffsetAttr().Set(0.04)
+    physx_collision_api.GetRestOffsetAttr().Set(0.02)
 
 
 class SubTerrain:

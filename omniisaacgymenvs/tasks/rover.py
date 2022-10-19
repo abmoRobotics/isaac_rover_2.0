@@ -27,19 +27,26 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.robots.articulations.rover import Rover
-
-from omni.isaac.core.articulations import ArticulationView
-from omniisaacgymenvs.robots.articulations.views.rover_view import RoverView
-from omni.isaac.core.utils.prims import get_prim_at_path
-from omni.isaac.core.prims import RigidPrimView
-from omni.isaac.core.objects import DynamicSphere
-import numpy as np
-import torch
 import math
 import random
+
+import numpy as np
+import torch
+from omni.isaac.core.articulations import ArticulationView
+from omni.isaac.core.objects import DynamicSphere
+from omni.isaac.core.prims import RigidPrimView
+from omni.isaac.core.utils.prims import get_prim_at_path
+from omni.isaac.core.utils.stage import get_current_stage
+from omniisaacgymenvs.robots.articulations.rover import Rover
+from omniisaacgymenvs.robots.articulations.views.rover_view import RoverView
+from omniisaacgymenvs.tasks.base.rl_task import RLTask
+from omniisaacgymenvs.tasks.utils.anymal_terrain_generator import *
+from omniisaacgymenvs.tasks.utils.rover_terrain import *
+from omniisaacgymenvs.utils.kinematics import Ackermann
+from omniisaacgymenvs.utils.terrain_utils.terrain_generation import *
+from omniisaacgymenvs.utils.terrain_utils.terrain_utils import *
 from scipy.spatial.transform import Rotation as R
+
 
 class RoverTask(RLTask):
     def __init__(
@@ -62,7 +69,7 @@ class RoverTask(RLTask):
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
         self._max_episode_length = 500
-
+        self.curriculum = self._task_cfg["env"]["terrain"]["curriculum"]
         self._num_observations = 4
         self._num_actions = 2
         self._ball_position = torch.tensor([0, 0, 1.0])
@@ -74,14 +81,41 @@ class RoverTask(RLTask):
         # self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         # self.marker_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         # self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
-
+                # Previous actions and torques
+        self.actions_nn = torch.zeros((self.num_envs, self._num_actions, 3), device=self.device)
         RLTask.__init__(self, name, env)
         return
 
+
+    def _create_trimesh(self):
+        # terrain_width = 50 # terrain width [m]
+        # terrain_length = terrain_width # terrain length [m]
+        # horizontal_scale = 0.05 #0.025
+        #  # resolution per meter 
+        # self.heightfield = np.zeros((int(terrain_width/horizontal_scale), int(terrain_length/horizontal_scale)), dtype=np.int16)
+        # vertical_scale = 0.005 # vertical resolution [m]
+        # def new_sub_terrain(): return SubTerrain1(width=terrain_width,length=terrain_length,horizontal_scale=horizontal_scale,vertical_scale=vertical_scale)
+        # terrain = gaussian_terrain(new_sub_terrain(),0.5,0.0)
+        # terrain = gaussian_terrain(terrain,15,5)
+        # vertices, triangles = convert_heightfield_to_trimesh1(self.heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=None)
+        # rock_heigtfield, self.rock_positions = add_rocks_terrain(terrain=terrain)
+        # self.heightfield[0:int(terrain_width/horizontal_scale),:] = rock_heigtfield.height_field_raw
+        # vertices, triangles = convert_heightfield_to_trimesh1(self.heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=None)
+        vertices, triangles = load_terrain('terrainTest.ply')
+
+        self.terrain = Terrain(self._task_cfg["env"]["terrain"], num_robots=self.num_envs)
+        vertices = self.terrain.vertices
+        triangles = self.terrain.triangles
+        position = torch.tensor([-35 , -35, 0.0])
+        add_terrain_to_stage(stage=self._stage, vertices=vertices, triangles=triangles, position=position)  
+        self.height_samples = torch.tensor(self.terrain.heightsamples).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
+        
     # Sets up the scene for the rover to navigate in
     def set_up_scene(self, scene) -> None:
+        self._stage = get_current_stage()
         self.get_rover()    # Gets the rover asset/articulations
         self.get_target()   # Gets the target sphere (only used for visualizing the target)
+        self.get_terrain()
         super().set_up_scene(scene)
         self._rover = RoverView(prim_paths_expr="/World/envs/.*/Rover", name="rover_view")  # Creates an objects for the rover
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball", name="targets_view", reset_xform_properties=False)   # Creates an object for the sphere
@@ -110,6 +144,15 @@ class RoverTask(RLTask):
         self._sim_config.apply_articulation_settings("ball", get_prim_at_path(ball.prim_path), self._sim_config.parse_actor_config("ball"))
         ball.set_collision_enabled(False)
 
+    def get_terrain(self):
+        self.env_origins = torch.zeros((self.num_envs, 3), device=self.device, requires_grad=False)
+        if not self.curriculum: self._task_cfg["env"]["terrain"]["maxInitMapLevel"] = self._task_cfg["env"]["terrain"]["numLevels"] - 1
+        #self.terrain_levels = torch.randint(0, self._task_cfg["env"]["terrain"]["maxInitMapLevel"]+1, (self.num_envs,), device=self.device)
+        #self.terrain_types = torch.randint(0, self._task_cfg["env"]["terrain"]["numTerrains"], (self.num_envs,), device=self.device)
+        self._create_trimesh()  
+        self.terrain_origins = torch.from_numpy(self.terrain.env_origins).to(self.device).to(torch.float)
+
+
     def get_observations(self) -> dict:
         # This function is used for calculating the observations/input to the rover.
         pass
@@ -124,24 +167,43 @@ class RoverTask(RLTask):
             # Reset goal targets
             self.set_targets1(reset_env_ids)
         
-            
-        #actions = actions.to(self._device)
+        # Get action from model    
+        _actions = actions.to(self._device)
 
+        # Code for running ExoMy in Ackermann mode
+        _actions[:,0] = _actions[:,0] * 3
+        _actions[:,1] = _actions[:,1] * 3
+        self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
+        steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
+        
         # Create a n x 4 matrix for positions, where n is the number of environments/robots
         positions = torch.zeros((self._rover.count, 4), dtype=torch.float32, device=self._device)
         # Create a n x 6 matrix for velocities
         velocities = torch.zeros((self._rover.count, 6), dtype=torch.float32, device=self._device)
+        
+        positions[:, 0] = steering_angles[:,1] # Position of the front right(FR) motor.
+        positions[:, 1] = steering_angles[:,5] # Position of the rear right(RR) motor.
+        positions[:, 2] = steering_angles[:,0] # Position of the front left(FL) motor.
+        positions[:, 3] = steering_angles[:,4] # Position of the rear left(RL) motor.
+        velocities[:, 0] = motor_velocities[:,1] # Velocity FR
+        velocities[:, 1] = motor_velocities[:,3] # Velocity CR
+        velocities[:, 2] = motor_velocities[:,5] # Velocity RR
+        velocities[:, 3] = motor_velocities[:,0] # Velocity FL
+        velocities[:, 4] = motor_velocities[:,2] # Velocity CL
+        velocities[:, 5] = motor_velocities[:,4] # Velocity RL
 
+
+        # For debugging
         positions[:, 0] = 0 # Position of the front right(FR) motor.
         positions[:, 1] = 0 # Position of the rear right(RR) motor.
         positions[:, 2] = 0 # Position of the front left(FL) motor.
         positions[:, 3] = 0 # Position of the rear left(FL) motor.
-        velocities[:, 0] = 6.28/3 # Velocity FR
-        velocities[:, 1] = 6.28/3 # Velocity CR
-        velocities[:, 2] = 6.28/3 # Velocity RR
-        velocities[:, 3] = 6.28/3 # Velocity FL
-        velocities[:, 4] = 6.28/3 # Velocity CL
-        velocities[:, 5] = 6.28/3 # Velocity RL
+        velocities[:, 0] = -6.28/3 # Velocity FR
+        velocities[:, 1] = -6.28/3 # Velocity CR
+        velocities[:, 2] = -6.28/3 # Velocity RR
+        velocities[:, 3] = -6.28/3 # Velocity FL
+        velocities[:, 4] = -6.28/3 # Velocity CL
+        velocities[:, 5] = -6.28/3 # Velocity RL
 
         # Set position of the steering motors
         self._rover.set_joint_position_targets(positions,indices=None,joint_indices=self._rover.actuated_pos_indices)
@@ -158,7 +220,8 @@ class RoverTask(RLTask):
         r = []
         # Generates a random orientation for each rover
         for i in range(num_resets):
-            r.append(R.from_euler('xyz', [(random.random() * 2 * math.pi), 0, 3.14], degrees=False).as_quat())
+            #r.append(R.from_euler('xyz', [(random.random() * 2 * math.pi), 0, 3.14], degrees=False).as_quat())
+            r.append(R.from_euler('xyz', [0, 0, 0], degrees=False).as_quat())
 
         reset_orientation = torch.cuda.FloatTensor(r) # Convert quartenion to tensor
 
@@ -188,7 +251,7 @@ class RoverTask(RLTask):
 
     def calculate_metrics(self) -> None:
         # Function for calculating the reward functions
-        
+        zero_reward = torch.zeros_like(self.reset_buf,dtype=torch.float)
         # cart_pos = self.obs_buf[:, 0]
         # cart_vel = self.obs_buf[:, 1]
         # pole_angle = self.obs_buf[:, 2]
@@ -197,9 +260,18 @@ class RoverTask(RLTask):
         # reward = 1.0 - pole_angle * pole_angle - 0.01 * torch.abs(cart_vel) - 0.005 * torch.abs(pole_vel)
         # reward = torch.where(torch.abs(cart_pos) > self._reset_dist, torch.ones_like(reward) * -2.0, reward)
         # reward = torch.where(torch.abs(pole_angle) > np.pi / 2, torch.ones_like(reward) * -2.0, reward)
-
+    
         # self.rew_buf[:] = reward
-        pass
+            # Motion constraint - No oscillatins
+        penalty1 = torch.where((torch.abs(self.actions_nn[:,0,0] - self.actions_nn[:,0,1]) > 0.05), torch.square(torch.abs(self.actions_nn[:,0,0] - self.actions_nn[:,0,1])),zero_reward)
+        penalty2 = torch.where((torch.abs(self.actions_nn[:,1,0] - self.actions_nn[:,1,1]) > 0.05), torch.square(torch.abs(self.actions_nn[:,1,0] - self.actions_nn[:,1,1])),zero_reward)
+        motion_contraint_penalty =  torch.pow(penalty1,2) * (-0.01)#rew_scales["motion_contraint"]
+        motion_contraint_penalty = motion_contraint_penalty+(torch.pow(penalty2,2)) * (-0.01)#rew_scales["motion_contraint"]
+
+
+        reward_total = motion_contraint_penalty
+
+        self.rew_buf[:] = reward_total
 
     def generate_goals(self,env_ids,radius=3):
         valid_goal = False
