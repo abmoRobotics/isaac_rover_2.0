@@ -6,7 +6,7 @@ import random
 
 
 
-def depth_transform(rover_r, rover_l, rover_depth_points):
+def depth_transform(rover_l, rover_r, rover_depth_points):
     # X:0, Y:1, Z:2
 
     # Get number of points and number of robots from input
@@ -28,8 +28,8 @@ def depth_transform(rover_r, rover_l, rover_depth_points):
     cosxr = torch.transpose(torch.cos(rover_r[:,0].expand(1, num_robots)), 0, 1)
     sinyr = torch.transpose(torch.sin(rover_r[:,1].expand(1, num_robots)), 0, 1)
     cosyr = torch.transpose(torch.cos(rover_r[:,1].expand(1, num_robots)), 0, 1)
-    sinzr = torch.transpose(torch.sin(rover_r[:,2].expand(1, num_robots)), 0, 1)
-    coszr = torch.transpose(torch.cos(rover_r[:,2].expand(1, num_robots)), 0, 1)
+    sinzr = torch.transpose(torch.sin(-rover_r[:,2].expand(1, num_robots)), 0, 1)
+    coszr = torch.transpose(torch.cos(-rover_r[:,2].expand(1, num_robots)), 0, 1)
 
     # Expand location vector to be of size[x, y], from size[x]: [n, p]
     rover_xl = torch.transpose(rover_l[:, 0].expand(num_points,num_robots), 0, 1)
@@ -47,28 +47,35 @@ def depth_transform(rover_r, rover_l, rover_depth_points):
     #Stack points in a [x, y, 3] matrix, and return
     return torch.stack((x_p[:,0:num_points-1], y_p[:,0:num_points-1], z_p[:,0:num_points-1]), 2), rover_dir
 
-def draw_depth(depth_points: torch.tensor, points ):
+def draw_depth(heightmap_points: torch.tensor, depth_points: torch.tensor,):
     draw = _debug_draw.acquire_debug_draw_interface()
     
-    rover_distribution = depth_points.tolist()
+    rover_distribution = heightmap_points.tolist()
 
     N = len(rover_distribution)
 
-    print(N)
-
     rover_distributionZ = []
+    rover_distribution2 = []
     
     for i in range(N):
-        rover_distributionZ[i] = rover_distribution[i, 2]+0.1
-    
-    print(len(rover_distributionZ))
+        rover_distributionZ.append(rover_distribution[i][2]+0.1)
 
-    rover_distribution2 = [rover_distribution[0], rover_distribution[1], rover_distributionZ]
+    for i in range(N):
+        rover_distribution2.append([rover_distribution[i][0], rover_distribution[i][1], rover_distributionZ[i]])
 
-    colors = [(random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1), 1) for _ in range(N)]
-    sizes = [random.randint(1, 25) for _ in range(N)]
+    colors = [3 for _ in range(N)]
+    sizes = [[3] for _ in range(N)]
+    draw.clear_lines()
+    if depth_points == 0:
+        draw.draw_lines(rover_distribution, rover_distribution2, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
+    else:
+        draw.draw_lines(rover_distribution, depth_points, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
 
-    draw.draw_lines(rover_distribution, rover_distribution2, colors, sizes)
 
-    print(len(point_list_1[0]))
-    print(len(rover_distribution[0]))
+def draw_point(points):
+    draw = _debug_draw.acquire_debug_draw_interface()
+    N = 1
+
+    point_list = points.tolist()
+    draw.clear_points()
+    draw.draw_points([point_list], [(0.9, 0.5, 0.9, 0.9)], [55])
