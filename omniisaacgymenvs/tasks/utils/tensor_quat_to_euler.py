@@ -7,6 +7,7 @@ def tensor_quat_to_eul(quats):
     # https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
     # Quaternions format: W, X, Y, Z
     # Quat index:         0, 1, 2, 3
+    # Euler angles:       ZYX
 
     euler_angles = torch.zeros([len(quats), 3], device='cuda:0')
     ones = torch.ones([len(quats)], device='cuda:0')
@@ -18,7 +19,7 @@ def tensor_quat_to_eul(quats):
     euler_angles[:,0] = torch.atan2(sinr_cosp, cosr_cosp)
 
     #Pitch
-    sinp = 2 * (quats[:,0]*quats[:,1] - quats[:,3] * quats[:,1])
+    sinp = 2 * (quats[:,0]*quats[:,2] - quats[:,3] * quats[:,1])
     condition = (torch.sign(sinp - ones) >= zeros)
     euler_angles[:,1] = torch.where(condition, torch.copysign((ones*torch.pi)/2, sinp), torch.asin(sinp)) 
 
