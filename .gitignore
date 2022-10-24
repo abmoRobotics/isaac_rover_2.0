@@ -4,3 +4,9 @@ runs
 omniisaacgymenvs.egg-info/
 checkpoints
 omniisaacgymenvs/wandb
+omniisaacgymenvs/tasks/utils/terrain.ply
+omniisaacgymenvs/tasks/utils/heightmap_tensor.pt
+omniisaacgymenvs/tasks/utils/map_indices.pt
+omniisaacgymenvs/tasks/utils/map_values.pt
+omniisaacgymenvs/tasks/utils/triangles.pt
+omniisaacgymenvs/tasks/utils/vertices.pt
