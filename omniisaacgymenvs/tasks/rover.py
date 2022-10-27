@@ -32,6 +32,7 @@ import random
 
 import numpy as np
 import torch
+import utils.terrain_utils
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.objects import DynamicSphere
 from omni.isaac.core.prims import RigidPrimView
@@ -75,6 +76,8 @@ class RoverTask(RLTask):
         self._ball_position = torch.tensor([0, 0, 1.0])
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 0
+        self.stone_info = utils.terrain_utils.read_stone_info("/home/decamargo/Desktop/stone_info.npy")
+        self.shift = 5
         # self._rover_position = torch.tensor([0, 0, 2])
         
 
@@ -328,3 +331,16 @@ class RoverTask(RLTask):
         #resets = torch.zeros((self._num_envs, 1), device=self._device)
         resets = torch.where(self.progress_buf >= self._max_episode_length, 1, 0)
         self.reset_buf[:] = resets
+
+
+    def check_spawn_collision(self):
+        initial_root_states = self._rover_positions
+        old_initial_root_states = None
+        while not initial_root_states == old_initial_root_states:
+            # what is the purpose of env_origins here? -> can it get removed?
+            self._rover_positions[:, 0:2] = initial_root_states[:,0:2] - self.shift #.add(self.env_origins_tensor[:,0:2]) - self.shift 
+            old_initial_root_states = initial_root_states
+            dist_rocks = torch.cdist(self._rover_positions[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
+            dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]                               # Calculate distance to nearest point of all rocks
+            nearest_rock = torch.min(dist_rocks,dim=1)[0]                                   # Find the closest rock to each robot
+            initial_root_states[:,0] = torch.where(nearest_rock[:] <= 0.6,initial_root_states[:,0]+0.10,initial_root_states[:,0])
