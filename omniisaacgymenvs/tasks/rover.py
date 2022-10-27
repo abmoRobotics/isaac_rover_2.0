@@ -32,7 +32,7 @@ import random
 
 import numpy as np
 import torch
-import utils.terrain_utils
+import utils.terrain_utils.terrain_utils
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.objects import DynamicSphere
 from omni.isaac.core.prims import RigidPrimView
@@ -76,7 +76,7 @@ class RoverTask(RLTask):
         self._ball_position = torch.tensor([0, 0, 1.0])
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 0
-        self.stone_info = utils.terrain_utils.read_stone_info("/home/decamargo/Desktop/stone_info.npy")
+        self.stone_info = utils.terrain_utils.terrain_utils.read_stone_info("/home/decamargo/Desktop/stone_info.npy")
         self.shift = 5
         # self._rover_position = torch.tensor([0, 0, 2])
         
