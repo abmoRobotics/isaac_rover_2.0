@@ -47,7 +47,9 @@ def calculate_knn_grid(file_name):
     map[1] = torch.transpose(map[1]*yy, 0, 1)
     map = map.swapaxes(0,1)
     map = map.swapaxes(1,2)
-    print(map[0:100,0].unsqueeze(-1).shape)
+    
+    print(map[0:10,0].unsqueeze(-1).shape)
+    exit()
     # Create empty array for storing triangles 
     x = torch.tensor([[1, 1],[0,0]],device='cuda:0',dtype=torch.float16)
     # Create empty array for storing knn
