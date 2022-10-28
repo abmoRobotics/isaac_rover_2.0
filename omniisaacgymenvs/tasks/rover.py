@@ -278,11 +278,10 @@ class RoverTask(RLTask):
         self.rew_buf[:] = reward_total
 
     def generate_goals(self,env_ids,radius=3):
-        valid_goal = False
-        while (not valid_goal):
-            self.random_goals(env_ids, radius=radius) # Generate random goals
-            valid_goal = True
-            #env_ids, reset_buf_len = self.check_goal_collision(env_ids) # Check if goals collides with random rocks
+        self.random_goals(env_ids, radius=radius) # Generate random goals
+        valid_goals = self.avoid_pos_rock_collision(self.target_positions)
+        self.target_positions = valid_goals
+
 
     def random_goals(self, env_ids, radius):
         num_sets = len(env_ids)
@@ -295,15 +294,16 @@ class RoverTask(RLTask):
         self.target_positions[env_ids, 0] = x #+ self.spawn_offset[env_ids, 0]
         self.target_positions[env_ids, 1] = y #+ self.spawn_offset[env_ids, 1]
 
+
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
-        self.generate_goals(env_ids, radius=3) # Generate g     oals
+        self.generate_goals(env_ids, radius=3) # Generate goals
         envs_long = env_ids.long()
         print("Terrain: " + str(self.terrain.heightsamples.shape))
         print(self.target_positions)
         global_pos = self.target_positions[env_ids, 0:2]#.add(self.env_origins_tensor[env_ids, 0:2])
-        #height_offset = height_lookup(self.tensor_map, global_pos, self.horizontal_scale, self.vertical_scale, self.shift, global_pos, torch.zeros(num_sets, 3), self.exo_depth_points_tensor)
-        self.target_positions[env_ids, 2] = 0#height_offset
+        height= self.get_spawn_height(self.tensor_map, global_pos, self.horizontal_scale, self.vertical_scale, self.shift)
+        self.target_positions[env_ids, 2] = height
         marker_pos= self.target_positions
         self._balls.set_world_poses(marker_pos[:,0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
 
@@ -311,6 +311,36 @@ class RoverTask(RLTask):
         #self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_sets)
 
         #return actor_indices
+
+    
+    def get_spawn_height(heightmap: torch.Tensor, depth_points: torch.Tensor, horizontal_scale, vertical_scale, shift):
+        # Scale locations to fit heightmap
+        print(depth_points)
+        print(shift)
+        print(horizontal_scale)
+        scaledmap = (depth_points-shift)/horizontal_scale
+        # Bound values inside the map
+        scaledmap = torch.clamp(scaledmap, min = 0, max = heightmap.size()[0]-1)
+        # Round to nearest integer
+        scaledmap = torch.round(scaledmap)
+
+        # Convert x,y coordinates to two vectors.
+        x = scaledmap[:,0]
+        y = scaledmap[:,1]
+        x = x.type(torch.long)
+        y = y.type(torch.long)
+
+        # Lookup heights in heightmap
+        heights = heightmap[x, y]
+        # print(x)
+        # print("y")
+        # print(y)
+        
+        # Scale to fit actual height, dependent on resolution
+        heights = heights * vertical_scale
+
+        return heights
+
 
     def set_targets1(self, env_ids):
         # Function for generating random goals
@@ -338,14 +368,15 @@ class RoverTask(RLTask):
         self.reset_buf[:] = resets
 
 
-    def check_spawn_collision(self):
-        initial_root_states = self._rover_positions
-        old_initial_root_states = None
-        while not initial_root_states == old_initial_root_states:
+    def avoid_pos_rock_collision(self, curr_pos):
+        #curr_pos = self._rover_positions
+        old_pos = None
+        while not curr_pos == old_pos:
             # what is the purpose of env_origins here? -> can it get removed?
-            self._rover_positions[:, 0:2] = initial_root_states[:,0:2] - self.shift #.add(self.env_origins_tensor[:,0:2]) - self.shift 
-            old_initial_root_states = initial_root_states
-            dist_rocks = torch.cdist(self._rover_positions[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
+            shifted_pos = curr_pos[:,0:2] - self.shift #.add(self.env_origins_tensor[:,0:2]) - self.shift 
+            old_pos = curr_pos
+            dist_rocks = torch.cdist(shifted_pos[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
             dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]                               # Calculate distance to nearest point of all rocks
             nearest_rock = torch.min(dist_rocks,dim=1)[0]                                   # Find the closest rock to each robot
-            initial_root_states[:,0] = torch.where(nearest_rock[:] <= 0.6,initial_root_states[:,0]+0.10,initial_root_states[:,0])
+            curr_pos[:,0] = torch.where(nearest_rock[:] <= 0.2,curr_pos[:,0]+0.10,curr_pos[:,0])
+        return curr_pos
