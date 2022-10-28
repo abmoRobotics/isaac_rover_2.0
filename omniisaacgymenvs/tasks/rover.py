@@ -161,7 +161,7 @@ class RoverTask(RLTask):
         pass
 
     def pre_physics_step(self, actions) -> None:
-        print(self._rover.get_default_state()[0])
+        #print(self._rover.get_default_state()[0])
         #print()
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
@@ -169,7 +169,7 @@ class RoverTask(RLTask):
             # Reset rovers 
             self.reset_idx(reset_env_ids)
             # Reset goal targets
-            self.set_targets1(reset_env_ids)
+            self.set_targets(reset_env_ids)
         
         # Get action from model    
         _actions = actions.to(self._device)
@@ -292,20 +292,25 @@ class RoverTask(RLTask):
         TargetCordy = 0
         x = TargetRadius * torch.cos(alpha) + TargetCordx
         y = TargetRadius * torch.sin(alpha) + TargetCordy
-        self.target_root_positions[env_ids, 0] = x #+ self.spawn_offset[env_ids, 0]
-        self.target_root_positions[env_ids, 1] = y #+ self.spawn_offset[env_ids, 1]
+        self.target_positions[env_ids, 0] = x #+ self.spawn_offset[env_ids, 0]
+        self.target_positions[env_ids, 1] = y #+ self.spawn_offset[env_ids, 1]
 
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         self.generate_goals(env_ids, radius=3) # Generate g     oals
-        global_pos = self.target_root_positions[env_ids, 0:2].add(self.env_origins_tensor[env_ids, 0:2])
+        envs_long = env_ids.long()
+        print("Terrain: " + str(self.terrain.heightsamples.shape))
+        print(self.target_positions)
+        global_pos = self.target_positions[env_ids, 0:2]#.add(self.env_origins_tensor[env_ids, 0:2])
         #height_offset = height_lookup(self.tensor_map, global_pos, self.horizontal_scale, self.vertical_scale, self.shift, global_pos, torch.zeros(num_sets, 3), self.exo_depth_points_tensor)
-        self.target_root_positions[env_ids, 2] = 0#height_offset
-        self.marker_positions[env_ids] = self.target_root_positions[env_ids] 
-        actor_indices = self.all_actor_indices[env_ids, 1].flatten()
+        self.target_positions[env_ids, 2] = 0#height_offset
+        marker_pos= self.target_positions
+        self._balls.set_world_poses(marker_pos[:,0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
+
+        #actor_indices = self.all_actor_indices[env_ids, 1].flatten()
         #self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_sets)
 
-        return actor_indices
+        #return actor_indices
 
     def set_targets1(self, env_ids):
         # Function for generating random goals
