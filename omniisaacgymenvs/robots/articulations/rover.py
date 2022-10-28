@@ -55,9 +55,7 @@ class Rover(Robot):
             #assets_root_path = get_assets_root_path()
             assets_root_path = "http://localhost:8080/omniverse://127.0.0.1/"
             #assets_root_path = "http://100.127.177.125:8080/omniverse://100.127.177.125"
-           # assets_root_path = "./"
-            print(assets_root_path)
-            print("tester")
+            # print(assets_root_path)
             if assets_root_path is None:
                 carb.log_error("Could not find Isaac Sim assets folder")
             #self._usd_path ="/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Projects/usd/exomy/exomy_model/cartpole.usd" #"http://localhost:8080/omniverse://100.127.177.125/Projects/usd/exomy/exomy_model/Cartpole.usd"#"./cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"#/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"
@@ -68,13 +66,7 @@ class Rover(Robot):
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/exomy_model.usd"
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/mars_rover_2_working.usd"
 
-        print("hej")
-        print(self._usd_path)
-        print(prim_path)
         add_reference_to_stage(self._usd_path, prim_path)   
-        print("hej") 
-        print(self._usd_path)
-        print(prim_path)
         super().__init__(
             prim_path=prim_path,
             name=name,
