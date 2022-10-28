@@ -68,7 +68,7 @@ class RoverTask(RLTask):
         
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
-        self._rover_positions = torch.tensor([5.0, 5.0, 2.0])
+        self._rover_positions = torch.tensor([25.0, 25.0, 2.0])
 
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
@@ -131,14 +131,9 @@ class RoverTask(RLTask):
         position = rover_spawn_height(heightmap,positions[:,0:2],0.025,1,self.shift[0:2])
         position = position.unsqueeze(1)
         zero_position = torch.zeros((self._num_envs,2),device=self._device)
-        #print(position.shape)
-        #print(zero_position.shape)
+
         self.position_z_offset = torch.cat((zero_position,position.to('cuda:0')),1)
-        #print(self._rover.get_default_state())
-       # print(torch.cat(torch.zeros((8,2)),position))
-        #print((torch.tensor([torch.zeros((8,2)),position])))
-        #self._rover.set_default_state(position)
-        #print(positions[:,0:2])
+
         self.initial_pos = self._rover.get_world_poses()[0]
         #print(self.initial_pos)
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball", name="targets_view", reset_xform_properties=False)   # Creates an object for the sphere
@@ -192,19 +187,12 @@ class RoverTask(RLTask):
         #try:
         self.rover_loc = self._rover.get_world_poses()[0]
         self.rover_rot = tensor_quat_to_eul(self._rover.get_world_poses()[1])
-        #print(self.rover_rot)
-        print("starting")
+
         a = torch.zeros((8,3),device=self._device)
         b = torch.ones((8,3),device=self._device)
-        #tester = self.Camera.get_depths(self.rover_loc,self.rover_rot)
-        tester = self.Camera.get_depths(self.rover_loc,self.rover_rot)
+        #c_tester = self.Camera.get_depths(self.rover_loc,self.rover_rot)
         
-        #print(tester.shape)
-        
-        print("done")
-        # except:
-        #     print("FAILFAIL")
-        #print(tester)
+      
         #time.sleep(2)
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
@@ -248,12 +236,12 @@ class RoverTask(RLTask):
         positions[:, 1] = 0 # Position of the rear right(RR) motor.
         positions[:, 2] = 0 # Position of the front left(FL) motor.
         positions[:, 3] = 0 # Position of the rear left(FL) motor.
-        velocities[:, 0] = 0#-6.28/3 # Velocity FR
-        velocities[:, 1] = 0#-6.28/3 # Velocity CR
-        velocities[:, 2] = 0#-6.28/3 # Velocity RR
-        velocities[:, 3] = 0#-6.28/3 # Velocity FL
-        velocities[:, 4] = 0#-6.28/3 # Velocity CL
-        velocities[:, 5] = 0#-6.28/3 # Velocity RL
+        velocities[:, 0] = -6.28/3 # Velocity FR
+        velocities[:, 1] = -6.28/3 # Velocity CR
+        velocities[:, 2] = -6.28/3 # Velocity RR
+        velocities[:, 3] = -6.28/3 # Velocity FL
+        velocities[:, 4] = -6.28/3 # Velocity CL
+        velocities[:, 5] = -6.28/3 # Velocity RL
 
         # Set position of the steering motors
         self._rover.set_joint_position_targets(positions,indices=None,joint_indices=self._rover.actuated_pos_indices)

@@ -51,20 +51,23 @@ def get_knn_triangles():
     res = 0.05 # 5 cm resolution
 
     # Load mesh
-    input_file = "terrainTest.ply"
+    input_file = "tasks/utils/terrainTest.ply"
     mesh = o3d.io.read_triangle_mesh(input_file) # Read the point cloud 
 
     # Get vertices and triangles from mesh
     vertices = np.asarray(mesh.vertices)
     triangles = np.asarray(mesh.triangles)
-
+    #print(vertices.shape)
+    #print(triangles.shape)
+    #print(vertices[triangles[:,0]][:,0].shape)
     # Calculate center of each triangle 
     x = (vertices[triangles[:,0]][:,0] + vertices[triangles[:,1]][:,0] + vertices[triangles[:,2]][:,0]) / 3
     y = (vertices[triangles[:,0]][:,1] + vertices[triangles[:,1]][:,1] + vertices[triangles[:,2]][:,1]) / 3
     z = (vertices[triangles[:,0]][:,2] + vertices[triangles[:,1]][:,2] + vertices[triangles[:,2]][:,2]) / 3
     center = np.array([x,y])
     center = torch.tensor(center,device=device,dtype=torch.float16)
-
+    print(center.shape)
+  
     # Create matrix which contains value corresponding to the spatial x, y position
     xx = torch.arange(0,res_x*res,res,device=device,dtype=torch.float16)
     yy = torch.arange(0,res_y*res,res,device=device,dtype=torch.float16)
@@ -73,33 +76,58 @@ def get_knn_triangles():
     map[1] = torch.transpose(map[1]*yy, 0, 1)
     map = map.swapaxes(0,1)
     map = map.swapaxes(1,2)
-    print(map[0:100,0].unsqueeze(-1).shape)
+    print(map[0,0:10,:])
+    
+    index =torch.tensor([1,0],device=device,dtype=torch.int64)
+    map = torch.index_select(map,2,index) # 1200 x 1200 x 2
+    #print(m[0:10,0])
+    #exit()
+    #print(map[0:100,0].unsqueeze(-1).shape)
     # Create empty array for storing triangles 
-    x = torch.tensor([[1, 1],[0,0]],device=device,dtype=torch.float16)
+    #x = torch.tensor([[1, 1],[0,0]],device=device,dtype=torch.float16)
     # Create empty array for storing knn
     knn_indices = torch.ones(100,1200,1200,device=device,dtype=torch.int32)
 
-    print(center.shape)
+    #print(center.shape)
     #x = x.repeat(center.shape[1],1).swapaxes(0,1)
-    x = x.unsqueeze(-1)
-    center = center.repeat(100,1,1)
-
+    #x = x.unsqueeze(-1)
+    center = center.repeat(100,1,1) # 100 x 2 x 398677
+    print(center.shape)
     # For loop for finding the 100 nearest triangles(relative to x,y) to each spatial x,y position in the map matrix.
     for x in range(12):
         print(x)
         for y in range(1200):
             # Get 100 x,y positions from the map
-            #data = torch.ones(100,2,1,device=device)
-            data = map[x*100:x*100+100,y].unsqueeze(-1)
-
+            data = map[x*100:x*100+100,y].unsqueeze(-1) # 100 x 2 x 1
+            #print(center[:,:,10])
+            #print(data[:,:,0])
+            #print(torch.norm(center[:,:,10] - data[:,:,0],dim=1))
+            temp = torch.norm(center[:,:,10] - data[:,:,0],dim=1)
             # Calculate the difference between the center of the triangles and the data.
             dist = torch.norm(center - data,dim=1)
+            #print(dist[:,10] - temp)
+            #print(dist.shape)
+            #exit()
+            #print(dist[50,0])
+            
             #print(dist)
             # Get the smallest 100 distances
             knn = dist.topk(100, largest=False)
+            # print(knn.values[0,:])
+            # print(knn.indices[0,:])
+            
+            #print(knn.values[0])
+            
             #print(knn)
             # Save the indices
-            knn_indices[:,x*100:x*100+100,y] = knn.indices
+            knn_indices[:,x*100:x*100+100,y] = knn.indices.swapaxes(0,1) # 100 x 1200 x 1200
+            # print(knn_indices[:,0,0])
+   
+            vertices = torch.tensor(vertices,device=device,dtype=torch.float16)
+            triangles = torch.tensor(triangles,device=device,dtype=torch.int32)
+            #print(vertices[triangles[knn_indices[:,x*100,y].long()].long()])
+            #exit()
+ 
 
     vertices = torch.tensor(vertices,device=device,dtype=torch.float16)
     triangles = torch.tensor(triangles,device=device,dtype=torch.int32)

@@ -49,8 +49,8 @@ def depth_transform(rover_l, rover_r, rover_depth_points):
 
 def draw_depth(heightmap_points: torch.tensor, depth_points: torch.tensor,):
     draw = _debug_draw.acquire_debug_draw_interface()
-    print(heightmap_points.shape)
-    print(depth_points.shape)
+    # print(heightmap_points.shape)
+    # print(depth_points.shape)
     rover_distribution = heightmap_points.tolist()
     depth_points = depth_points.tolist()
     N = len(rover_distribution)
