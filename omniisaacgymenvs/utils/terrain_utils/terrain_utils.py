@@ -30,7 +30,7 @@
 import numpy as np
 from numpy.random import choice
 from scipy import interpolate
-
+import torch
 from math import sqrt
 
 from omni.isaac.core.prims import XFormPrim
@@ -383,6 +383,15 @@ def add_terrain_to_stage(stage, vertices, triangles, position=None, orientation=
     physx_collision_api = PhysxSchema.PhysxCollisionAPI.Apply(terrain.prim)
     physx_collision_api.GetContactOffsetAttr().Set(0.04)
     physx_collision_api.GetRestOffsetAttr().Set(0.02)
+
+
+def read_stone_info(path):
+    n = np.load(path)
+    rs = np.zeros((len(n),1))
+    for i in range(len(n)):
+        rs[i][0] = max(n[i][3], n[i][4]) / 2
+    n = np.append(n, rs, axis=1)
+    return torch.from_numpy(n)
 
 
 class SubTerrain:
