@@ -138,20 +138,20 @@ def Ackermann(lin_vel, ang_vel):
 # The inputs are m/s and rad/s. The dimensions are for the mars rover 2.0 project - units in meters.
 # The code is made with basis in appendix D in the repport "Mapless Mobile Navigation on Mars using Reinforcement Learning"
 @torch.jit.script
-def Ackermann2(lin_vel, ang_vel):
-    # type: (Tensor, Tensor) -> Tuple[Tensor, Tensor]
+def Ackermann2(lin_vel, ang_vel, device):
+    # type: (Tensor, Tensor, str) -> Tuple[Tensor, Tensor]
     # All measurements in Meters!
 
     num_robots = lin_vel.shape[0]
     wheel_diameter = 0.2
 
     # Locations of the wheels, with respect to center(between middle wheels) (Y is forward, X is right)
-    wheel_FL = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.385],[0.438]],  device='cuda:0').repeat(1,num_robots), 0, 1),0)
-    wheel_FR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.385],[0.438]],   device='cuda:0').repeat(1,num_robots), 0, 1),0)
-    wheel_ML = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.447],[0.0]],    device='cuda:0').repeat(1,num_robots), 0, 1),0)
-    wheel_MR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.447],[0.0]],     device='cuda:0').repeat(1,num_robots), 0, 1),0)
-    wheel_RL = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.385],[-0.411]], device='cuda:0').repeat(1,num_robots), 0, 1),0)
-    wheel_RR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.385],[-0.411]],  device='cuda:0').repeat(1,num_robots), 0, 1),0)
+    wheel_FL = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.385],[0.438]],  device=device).repeat(1,num_robots), 0, 1),0)
+    wheel_FR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.385],[0.438]],   device=device).repeat(1,num_robots), 0, 1),0)
+    wheel_ML = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.447],[0.0]],    device=device).repeat(1,num_robots), 0, 1),0)
+    wheel_MR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.447],[0.0]],     device=device).repeat(1,num_robots), 0, 1),0)
+    wheel_RL = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.385],[-0.411]], device=device).repeat(1,num_robots), 0, 1),0)
+    wheel_RR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.385],[-0.411]],  device=device).repeat(1,num_robots), 0, 1),0)
     
     # Wheel locations, collected in a single variable
     wheel_locations = torch.cat((wheel_FL, wheel_FR, wheel_ML, wheel_MR, wheel_RL, wheel_RR), 0)
@@ -172,7 +172,7 @@ def Ackermann2(lin_vel, ang_vel):
     dist = torch.transpose((P - wheel_locations).pow(2).sum(2).sqrt(), 0, 1)
 
     # Motors on the left should turn opposite direction
-    motor_side = torch.transpose(torch.tensor([[-1.0],[1.0],[-1.0],[1.0],[-1.0],[1.0]], device='cuda:0').repeat((1, num_robots)), 0, 1)
+    motor_side = torch.transpose(torch.tensor([[-1.0],[1.0],[-1.0],[1.0],[-1.0],[1.0]], device=device).repeat((1, num_robots)), 0, 1)
     
     # When not turning on the spot, wheel velocity is actually determined by the linear direction
     wheel_linear = torch.transpose(torch.copysign(ang_vel, lin_vel).repeat((6,1)), 0, 1)
