@@ -29,6 +29,7 @@
 
 import math
 import random
+
 import time
 import numpy as np
 import torch
@@ -42,8 +43,8 @@ from omniisaacgymenvs.robots.articulations.rover import Rover
 from omniisaacgymenvs.robots.articulations.views.rover_view import RoverView
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.tasks.utils.anymal_terrain_generator import *
-from omniisaacgymenvs.tasks.utils.rover_depth import draw_depth
-from omniisaacgymenvs.tasks.utils.rover_terrain import *
+from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
+#from omniisaacgymenvs.tasks.utils.rover_terrain import *
 from omniisaacgymenvs.tasks.utils.rover_utils import *
 from omniisaacgymenvs.utils.kinematics import Ackermann
 from omniisaacgymenvs.utils.terrain_utils.terrain_generation import *
@@ -52,6 +53,31 @@ from scipy.spatial.transform import Rotation as R
 from omni.isaac.debug_draw import _debug_draw
 from omniisaacgymenvs.tasks.utils.tensor_quat_to_euler import tensor_quat_to_eul
 from omniisaacgymenvs.tasks.utils.camera import Camera
+
+class Memory():
+    def __init__(self,num_envs, num_states, horizon, device) -> None:
+        print(num_envs)
+        print(num_states)
+        self.tracker = torch.zeros((num_envs, num_states, horizon), device=device)
+        self.device = device
+        self.num_envs = num_envs
+        self.num_states = num_states
+        self.horizon = horizon
+        
+        
+    def get_state(self, timestep):
+        data = self.tracker[:,:,timestep]
+        
+        if (data.shape[1] == 1):
+            return data.squeeze(1)
+        else:
+            return data
+
+    def input_state(self, state): 
+        self.tracker = torch.cat((torch.reshape(state,(self.num_envs, self.num_states, 1)), self.tracker), 2)[:,:,0:self.horizon]
+
+
+
 class RoverTask(RLTask):
     def __init__(
         self,
@@ -61,6 +87,16 @@ class RoverTask(RLTask):
         offset=None
     ) -> None:
         self._device = 'cuda:0'
+        self.shift = torch.tensor([0 , 0, 0.0],device=self._device)
+        self.Camera= Camera(self._device,self.shift)
+        self.num_exteroceptive = self.Camera.get_num_exteroceptive()
+
+        # Define action space and observation space
+        self._num_proprioceptive = 4
+        self._num_observations = self._num_proprioceptive + self.num_exteroceptive
+        self._num_actions = 2
+
+
         #self._device = 'cpu'
         self._sim_config = sim_config
 
@@ -73,19 +109,24 @@ class RoverTask(RLTask):
 
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
-        self._max_episode_length = 500
+        self.max_episode_length = 500
         self.curriculum = self._task_cfg["env"]["terrain"]["curriculum"]
-        self._num_observations = 4
-        self._num_actions = 2
+
         self._ball_position = torch.tensor([0, 0, 1.0])
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.target_positions[:, 2] = 0
-        self.shift = torch.tensor([0 , 0, 0.0],device=self._device)
-        self.stone_info = utils.terrain_utils.terrain_utils.read_stone_info("/home/decamargo/Desktop/stone_info.npy")
-        # self.shift = 5
-        # self._rover_position = torch.tensor([0, 0, 2])
-        self.Camera= Camera(self._device,self.shift)
         
+
+        # Setup state trackers
+        self.linear_velocity = Memory(num_envs = self._num_envs, num_states = 1, horizon=3,device=self._device)
+        self.angular_velocity = Memory(num_envs = self._num_envs, num_states = 1, horizon=3,device=self._device)
+
+        # Load reward weights
+        print(self._task_cfg["rewards"])
+        self.rew_scales = self._task_cfg["rewards"]
+        # self._rover_position = torch.tensor([0, 0, 2])
+        
+        #self.stone_info = utils.terrain_utils.terrain_utils.read_stone_info("/home/decamargo/Desktop/stone_info.npy")
         # self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         # self.marker_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         # self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
@@ -93,7 +134,6 @@ class RoverTask(RLTask):
         self.actions_nn = torch.zeros((self.num_envs, self._num_actions, 3), device=self._device)
         RLTask.__init__(self, name, env)
         return
-
 
     def _create_trimesh(self):
         # terrain_width = 50 # terrain width [m]
@@ -128,9 +168,7 @@ class RoverTask(RLTask):
         super().set_up_scene(scene)
         self._rover = RoverView(prim_paths_expr="/World/envs/.*/Rover", name="rover_view")  # Creates an objects for the rover
         positions = self._rover.get_world_poses()[0]
-        #positions = positions.cpu()
-        heightmap = torch.load("tasks/utils/heightmap_tensor.pt")
-        #heightmap = heightmap.to('cpu')
+        heightmap = torch.load("tasks/utils/terrain/heightmap_tensor.pt")
         position = rover_spawn_height(heightmap,positions[:,0:2],0.025,1,self.shift[0:2])
         position = position.unsqueeze(1)
         zero_position = torch.zeros((self._num_envs,2),device=self._device)
@@ -143,10 +181,10 @@ class RoverTask(RLTask):
         scene.add(self._balls)  # Adds the sphere to the scene
         scene.add(self._rover)  # Adds the rover to the scene
         #self._rover.initialize()
-        draw = _debug_draw.acquire_debug_draw_interface()
-        points = [[0.0,0.0,0.0]]
-        colors = [[0.0,1.0,0.0,0.5]]
-        draw.draw_points(points, colors, [22])
+        # draw = _debug_draw.acquire_debug_draw_interface()
+        # points = [[0.0,0.0,0.0]]
+        # colors = [[0.0,1.0,0.0,0.5]]
+        # draw.draw_points(points, colors, [22])
         return
 
     def get_rover(self):
@@ -177,10 +215,37 @@ class RoverTask(RLTask):
         self._create_trimesh()  
         #self.terrain_origins = torch.from_numpy(self.terrain.env_origins).to(self.device).to(torch.float)
 
-
     def get_observations(self) -> dict:
+        # Get root state of rover
+        self.rover_positions = self._rover.get_world_poses()[0]
+        self.rover_rotation = tensor_quat_to_eul(self._rover.get_world_poses()[1])
+
+        # Calculate
+        direction_vector = torch.zeros([self.num_envs, 2], device=self._device)
+        target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
+        self.heading_diff = torch.atan2(target_vector[:,0] * direction_vector[:,1] - target_vector[:,1]*direction_vector[:,0],target_vector[:,0]*direction_vector[:,0]+target_vector[:,1]*direction_vector[:,1])
+
+
+        #root_positions
+        heightmap, output_pt, sources = self.Camera.get_depths(self.rover_positions,self.rover_rotation)
+        
+
         # This function is used for calculating the observations/input to the rover.
-        pass
+        self.obs_buf[:, 0] = torch.linalg.norm(target_vector,dim=1) / 4
+        self.obs_buf[:, 1] = (self.heading_diff) / math.pi
+        self.obs_buf[:, 2] = self.linear_velocity.get_state(timestep=0)
+        self.obs_buf[:, 3] = self.angular_velocity.get_state(timestep=0)
+
+        
+        self.obs_buf[:, self._num_proprioceptive:self._num_observations ] = heightmap
+        
+
+        observations = {
+            self._rover.name: {
+                "obs_buf": self.obs_buf
+            }
+        }
+        return observations
 
     def pre_physics_step(self, actions) -> None:
 
@@ -189,12 +254,7 @@ class RoverTask(RLTask):
         #print(self.terrain_origins)
         # Get the transformation data on rovers
         #try:
-        self.rover_loc = self._rover.get_world_poses()[0]
-        self.rover_rot = tensor_quat_to_eul(self._rover.get_world_poses()[1])
 
-        a = torch.zeros((8,3),device=self._device)
-        b = torch.ones((8,3),device=self._device)
-        #c_tester = self.Camera.get_depths(self.rover_loc,self.rover_rot)
         
       
         #time.sleep(2)
@@ -212,11 +272,16 @@ class RoverTask(RLTask):
         # Get action from model    
         _actions = actions.to(self._device)
 
+        # Track states
+        self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
+        self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
+
         # Code for running ExoMy in Ackermann mode
-        _actions[:,0] = _actions[:,0] * 3
-        _actions[:,1] = _actions[:,1] * 3
+        _actions[:,0] = _actions[:,0] * 1.17 # max speed
+        _actions[:,1] = _actions[:,1] * (1.17/0.58) # max speed / distance to wheel furthest away in meters
         #TODO remove
         _actions = _actions
+        
         self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
         self.actions_nn = self.actions_nn
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
@@ -292,7 +357,6 @@ class RoverTask(RLTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
 
-
     def post_reset(self):
         self.base_pos = torch.zeros((self.num_envs, 3), dtype=torch.float, device=self._device)
         self.initial_root_pos, self.initial_root_rot = self._rover.get_world_poses()
@@ -300,25 +364,55 @@ class RoverTask(RLTask):
 
     def calculate_metrics(self) -> None:
         # Function for calculating the reward functions
-        zero_reward = torch.zeros_like(self.reset_buf,dtype=torch.float)
-        # cart_pos = self.obs_buf[:, 0]
-        # cart_vel = self.obs_buf[:, 1]
-        # pole_angle = self.obs_buf[:, 2]
-        # pole_vel = self.obs_buf[:, 3]
+        # Tool tensors 
+        zero_reward = torch.zeros_like(self.reset_buf)
+        max_reward = torch.ones_like(self.reset_buf)
+        ones = torch.ones_like(self.reset_buf)
+        die = torch.zeros_like(self.reset_buf)
 
-        # reward = 1.0 - pole_angle * pole_angle - 0.01 * torch.abs(cart_vel) - 0.005 * torch.abs(pole_vel)
-        # reward = torch.where(torch.abs(cart_pos) > self._reset_dist, torch.ones_like(reward) * -2.0, reward)
-        # reward = torch.where(torch.abs(pole_angle) > np.pi / 2, torch.ones_like(reward) * -2.0, reward)
-    
-        # self.rew_buf[:] = reward
-            # Motion constraint - No oscillatins
-        # penalty1 = torch.where((torch.abs(self.actions_nn[:,0,0] - self.actions_nn[:,0,1]) > 0.05), torch.square(torch.abs(self.actions_nn[:,0,0] - self.actions_nn[:,0,1])),zero_reward)
-        # penalty2 = torch.where((torch.abs(self.actions_nn[:,1,0] - self.actions_nn[:,1,1]) > 0.05), torch.square(torch.abs(self.actions_nn[:,1,0] - self.actions_nn[:,1,1])),zero_reward)
-        # motion_contraint_penalty =  torch.pow(penalty1,2) * (-0.01)#rew_scales["motion_contraint"]
-        # motion_contraint_penalty = motion_contraint_penalty+(torch.pow(penalty2,2)) * (-0.01)#rew_scales["motion_contraint"]
+        # Get states
+        lin_vel = self.linear_velocity.get_state(timestep=0)        # Get current action
+        lin_vel_prev = self.linear_velocity.get_state(timestep=1)   # Get last action
+        ang_vel = self.angular_velocity.get_state(timestep=0)
+        ang_vel_prev = self.angular_velocity.get_state(timestep=1)
+
+        #
+        heading_diff = self.heading_diff
+
+        # Distance to target
+        target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
+
+        target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
+        direction_vector = torch.zeros([ones.shape[0], 2], device='cuda:0')
+        direction_vector[:,0] = torch.cos(self.rover_rotation[..., 2] - (math.pi/2)) # x value
+        direction_vector[:,1] = torch.sin(self.rover_rotation[..., 2] - (math.pi/2)) # y value
+
+        # Heading constraint - Avoid driving backwards
+        lin_vel = self.linear_velocity.get_state(0)   # Get latest lin_vel
+        heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]
 
 
-        # reward_total = motion_contraint_penalty
+        # penalty for driving away from the robot
+        goal_angle_penalty = torch.where(torch.abs(heading_diff) > 2, -torch.abs(heading_diff*0.3*self.rew_scales['goal_angle_reward']), zero_reward.float())
+
+        # Motion constraint - No oscillatins
+        penalty1 = torch.where((torch.abs(lin_vel - lin_vel_prev) > 0.05), torch.square(torch.abs(lin_vel - lin_vel_prev)),zero_reward.float())
+        penalty2 = torch.where((torch.abs(ang_vel- ang_vel_prev) > 0.05), torch.square(torch.abs(ang_vel- ang_vel_prev)),zero_reward.float())
+        motion_contraint_penalty =  torch.pow(penalty1,2) * self.rew_scales["motion_contraint_reward"]
+        motion_contraint_penalty = motion_contraint_penalty+(torch.pow(penalty2,2)) * self.rew_scales["motion_contraint_reward"]
+
+        # distance to target
+        pos_reward = (1.0 / (1.0 + target_dist * target_dist)) * self.rew_scales['pos_reward']
+        pos_reward = torch.where(target_dist <= 0.03, 1.03*(self.max_episode_length-self.progress_buf), pos_reward.float())  # reward for getting close to target
+
+        #TODO add collision penalty
+        reward = pos_reward + heading_contraint_penalty + motion_contraint_penalty + goal_angle_penalty
+        #reward = pos_reward + collision_penalty + heading_contraint_penalty + motion_contraint_penalty  + heading_diff_reward + goal_angle_penalty
+        #reward = torch.where(torch.abs(cart_pos) > self._reset_dist, torch.ones_like(reward) * -2.0, reward)
+        #reward = torch.where(torch.abs(pole_angle) > np.pi / 2, torch.ones_like(reward) * -2.0, reward)
+
+        self.rew_buf[:] = reward
+
 
         # self.rew_buf[:] = reward_total
 
@@ -409,7 +503,7 @@ class RoverTask(RLTask):
         # resets = torch.where(torch.abs(cart_pos) > self._reset_dist, 1, 0)
         # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
         #resets = torch.zeros((self._num_envs, 1), device=self._device)
-        resets = torch.where(self.progress_buf >= self._max_episode_length, 1, 0)
+        resets = torch.where(self.progress_buf >= self.max_episode_length, 1, 0)
         self.reset_buf[:] = resets
 
 

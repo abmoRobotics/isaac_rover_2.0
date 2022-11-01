@@ -15,9 +15,9 @@ INSTALL_REQUIRES = [
     "hydra-core==1.1.1",
     "redis==3.5.3", # needed by Ray on Windows
     "rl-games==1.5.2",
-    "skrl",
     "pymeshlab",
-    "open3d"
+    "open3d",
+    "skrl @ git+https://github.com/abmoRobotics/skrl.git#egg=skrl",
 ]
 
 # Installation operation
