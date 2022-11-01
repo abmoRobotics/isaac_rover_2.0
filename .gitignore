@@ -4,3 +4,16 @@ runs
 omniisaacgymenvs.egg-info/
 checkpoints
 omniisaacgymenvs/wandb
+omniisaacgymenvs/tasks/utils/float64/map_indices.pt
+omniisaacgymenvs/tasks/utils/float64/map_values.pt
+omniisaacgymenvs/tasks/utils/float64/triangles.pt
+omniisaacgymenvs/tasks/utils/float64/vertices.pt
+omniisaacgymenvs/tasks/utils/terrain/heightmap_tensor.pt
+omniisaacgymenvs/tasks/utils/terrain/terrainTest.ply
+omniisaacgymenvs/tasks/utils/terrain/knn_terrain/map_indices.pt
+omniisaacgymenvs/tasks/utils/terrain/knn_terrain/map_values.pt
+omniisaacgymenvs/tasks/utils/terrain/knn_terrain/triangles.pt
+omniisaacgymenvs/tasks/utils/terrain/knn_terrain/vertices.pt
+omniisaacgymenvs/tasks/utils/terrain.ply
+omniisaacgymenvs/tasks/utils/cameraBackup.py
+omniisaacgymenvs/tasks/utils/ray_castingbackup.py
