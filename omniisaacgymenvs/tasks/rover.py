@@ -33,6 +33,7 @@ import random
 import time
 import numpy as np
 import torch
+import utils.terrain_utils.terrain_utils
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.objects import DynamicSphere
 from omni.isaac.core.prims import RigidPrimView
@@ -125,7 +126,7 @@ class RoverTask(RLTask):
         self.rew_scales = self._task_cfg["rewards"]
         # self._rover_position = torch.tensor([0, 0, 2])
         
-        
+        #self.stone_info = utils.terrain_utils.terrain_utils.read_stone_info("/home/decamargo/Desktop/stone_info.npy")
         # self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         # self.marker_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         # self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
@@ -247,6 +248,7 @@ class RoverTask(RLTask):
         return observations
 
     def pre_physics_step(self, actions) -> None:
+
         #print(self._rover.get_local_poses()[0])
         #print(self._rover.get_world_poses()[0])
         #print(self.terrain_origins)
@@ -256,13 +258,16 @@ class RoverTask(RLTask):
         
       
         #time.sleep(2)
+
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
             # Reset rovers 
             self.reset_idx(reset_env_ids)
             # Reset goal targets
-            #self.set_targets1(reset_env_ids)
+
+            self.set_targets(reset_env_ids)
+
         
         # Get action from model    
         _actions = actions.to(self._device)
@@ -426,20 +431,25 @@ class RoverTask(RLTask):
         TargetCordy = 0
         x = TargetRadius * torch.cos(alpha) + TargetCordx
         y = TargetRadius * torch.sin(alpha) + TargetCordy
-        self.target_root_positions[env_ids, 0] = x #+ self.spawn_offset[env_ids, 0]
-        self.target_root_positions[env_ids, 1] = y #+ self.spawn_offset[env_ids, 1]
+        self.target_positions[env_ids, 0] = x #+ self.spawn_offset[env_ids, 0]
+        self.target_positions[env_ids, 1] = y #+ self.spawn_offset[env_ids, 1]
 
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         self.generate_goals(env_ids, radius=3) # Generate g     oals
-        global_pos = self.target_root_positions[env_ids, 0:2].add(self.env_origins_tensor[env_ids, 0:2])
+        envs_long = env_ids.long()
+        print("Terrain: " + str(self.terrain.heightsamples.shape))
+        print(self.target_positions)
+        global_pos = self.target_positions[env_ids, 0:2]#.add(self.env_origins_tensor[env_ids, 0:2])
         #height_offset = height_lookup(self.tensor_map, global_pos, self.horizontal_scale, self.vertical_scale, self.shift, global_pos, torch.zeros(num_sets, 3), self.exo_depth_points_tensor)
-        self.target_root_positions[env_ids, 2] = 0#height_offset
-        self.marker_positions[env_ids] = self.target_root_positions[env_ids] 
-        actor_indices = self.all_actor_indices[env_ids, 1].flatten()
+        self.target_positions[env_ids, 2] = 0#height_offset
+        marker_pos= self.target_positions
+        self._balls.set_world_poses(marker_pos[:,0:3], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
+
+        #actor_indices = self.all_actor_indices[env_ids, 1].flatten()
         #self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_sets)
 
-        return actor_indices
+        #return actor_indices
 
     def set_targets1(self, env_ids):
         # Function for generating random goals
@@ -467,22 +477,14 @@ class RoverTask(RLTask):
         self.reset_buf[:] = resets
 
 
-
-# if __name__ == "__main__":
-#     tracker1 = Memory(10,2,3)
-#     tracker2 = Memory(10,1,3)
-#     ones1 = torch.ones((10,2,3))
-#     ones2 = torch.ones((10,1,3))
-#     twos1 = torch.ones((10,2,3)) * 2
-#     twos2 = torch.ones((10,1,3)) * 2
-
-#     tracker1.input_state(ones1)
-#     tracker1.input_state(twos1)
-
-#     tracker2.input_state(ones2)
-#     tracker2.input_state(twos2)
-
-#     print(tracker1.get_state(0))
-#     print(tracker2.get_state(0))
-
-    
+    def check_spawn_collision(self):
+        initial_root_states = self._rover_positions
+        old_initial_root_states = None
+        while not initial_root_states == old_initial_root_states:
+            # what is the purpose of env_origins here? -> can it get removed?
+            self._rover_positions[:, 0:2] = initial_root_states[:,0:2] - self.shift #.add(self.env_origins_tensor[:,0:2]) - self.shift 
+            old_initial_root_states = initial_root_states
+            dist_rocks = torch.cdist(self._rover_positions[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
+            dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]                               # Calculate distance to nearest point of all rocks
+            nearest_rock = torch.min(dist_rocks,dim=1)[0]                                   # Find the closest rock to each robot
+            initial_root_states[:,0] = torch.where(nearest_rock[:] <= 0.6,initial_root_states[:,0]+0.10,initial_root_states[:,0])
