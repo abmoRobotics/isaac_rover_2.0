@@ -45,7 +45,7 @@ class Camera():
         self.horizontal = 0.05  # Resolution of the triangle map
         #self.map_values = self._load_triangles()    # Load triangles into an [1200,1200, 100, 3, 3] array
         self.map_indices, self.triangles, self.vertices = self._load_triangles_with_indices()   # Load into [1200,1200, 100, 3] array
-        self.heightmap_distribution = self._heightmap_distribution()    # Get distribution of points in the local reference frame of the rover
+        self.heightmap_distribution = heightmap_distribution()    # Get distribution of points in the local reference frame of the rover
         self.num_exteroceptive = self.heightmap_distribution.shape[0] 
         self.shift = shift          # Shift of the map 
         self.dtype = torch.float16  # data type for performing the calculations
@@ -234,78 +234,6 @@ class Camera():
         triangles_with_indices = triangles_with_indices.flatten()
         self._plot_mesh(triangles_with_indices)
 
-    def _heightmap_distribution(self, x_limit=1.12, y_limit=1.8, square=False, y_start=0.5, delta=0.05, front_heavy=0, plot=False):
-        """Returns distribution of heightmap points in the local frame of the robot"""
-        point_distribution = []
-
-        # If delta variable not set, exit.
-        if delta == 0:
-            # print("Need delta value!")
-            exit()
-
-        xd = 0
-        yd = 0
-
-        y = y_start
-        while y < y_limit:
-            
-            x = 0
-
-            delta += front_heavy
-
-            flag = True
-            if square==False:
-                limit = self._limit_at_x(y)
-                if x_limit < self._limit_at_x(y):
-                    limit = x_limit
-            else:
-                limit = x_limit
-
-
-            while x < limit:
-                
-                if x < -limit:
-                    x += delta
-                    xd += 1
-                    flag = False
-
-                if flag:
-                    x -= delta
-                    xd -= 1
-                else:
-                    #point_distribution.append([x, -y, -0.26878])
-                    point_distribution.append([y, -x, -0.26878])
-                    x += delta
-                    xd += 1
-
-            y += delta
-            yd +=1
-
-        point_distribution = np.round(point_distribution, 4)
-
-        xd = (int)(xd/yd)*2-1
-
-        if plot == True:
-            fig, ax = plt.subplots()
-            ax.scatter(point_distribution[:,0], point_distribution[:,1])
-            ax.set_aspect('equal')
-            plt.show()
-
-        #self.num_exteroceptive = 
-        distribution = torch.tensor(point_distribution, device=self.device)
-        print(distribution.shape)
-        return distribution
-    def _limit_at_x(self, x):
-        return x*(4.3315)-0.129945
-
-    def _OuterLine(self, x):
-        y = -0.2308*x-0.03
-        return y
-
-    def _InnerLine(self, x):
-        y = 0.7641*x-0.405
-        return y
-
     def _height_lookup(self, triangle_matrix: torch.Tensor, depth_points: torch.Tensor, horizontal_scale, shift):
         """Look up the nearest triangles relative to an x, y coordinate"""
         # Heightmap 1200x1200x100
@@ -338,16 +266,6 @@ class Camera():
 
         # Return the found heights
         return triangles, triangles_with_indices
-
-#TODO remove if not used    
-    def _heightmap_overlay(self,dim, point_distrubution):
-        zeros = torch.zeros_like(point_distrubution[:,0])
-        ones = torch.ones_like(point_distrubution[:,0])
-        belowOuter = point_distrubution[:,1] <= self._OuterLine(torch.abs(point_distrubution[:,0]))
-        belowInner = point_distrubution[:,1] <= self._InnerLine(torch.abs(point_distrubution[:,0]))
-        overlay = torch.where(belowInner, ones, zeros)
-
-        return overlay
 
 if __name__ == "__main__":
     a = torch.tensor([0.0,0.0],device='cuda:0')
