@@ -38,6 +38,7 @@ rewards:
   heading_contraint_reward: 0.1 #0.05
   motion_contraint_reward: -0.01  #0.005
   goal_angle_reward: 0.1
+  boogie_contraint_reward: 0.5
   
 sim:
   dt: 0.01 #0.0083 # 1/120 s

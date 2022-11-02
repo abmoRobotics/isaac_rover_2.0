@@ -88,7 +88,7 @@ class RoverTask(RLTask):
     ) -> None:
         self._device = 'cuda:0'
         self.shift = torch.tensor([0 , 0, 0.0],device=self._device)
-        self.Camera= Camera(self._device,self.shift)
+        self.Camera= Camera(self._device,self.shift,debug=True)
         self.num_exteroceptive = self.Camera.get_num_exteroceptive()
 
         # Define action space and observation space
@@ -376,21 +376,26 @@ class RoverTask(RLTask):
         ang_vel = self.angular_velocity.get_state(timestep=0)
         ang_vel_prev = self.angular_velocity.get_state(timestep=1)
 
+        # Get rover boogie angles
+        boogie_angles = self._rover.get_joint_positions()[:,0:3]
+
         #
         heading_diff = self.heading_diff
 
         # Distance to target
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
 
-        target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
-        direction_vector = torch.zeros([ones.shape[0], 2], device='cuda:0')
-        direction_vector[:,0] = torch.cos(self.rover_rotation[..., 2] - (math.pi/2)) # x value
-        direction_vector[:,1] = torch.sin(self.rover_rotation[..., 2] - (math.pi/2)) # y value
+        # target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
+        # direction_vector = torch.zeros([ones.shape[0], 2], device='cuda:0')
+        # direction_vector[:,0] = torch.cos(self.rover_rotation[..., 2] - (math.pi/2)) # x value
+        # direction_vector[:,1] = torch.sin(self.rover_rotation[..., 2] - (math.pi/2)) # y value
 
         # Heading constraint - Avoid driving backwards
         lin_vel = self.linear_velocity.get_state(0)   # Get latest lin_vel
         heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]
 
+        # Boogie angles - Penalty for driving over uneven terrain
+        boogie_penalty = ( torch.abs(boogie_angles[:,0]) + torch.abs(boogie_angles[:,1]) + torch.abs(boogie_angles[:,2]) ) * self.rew_scales["boogie_contraint_reward"]
 
         # penalty for driving away from the robot
         goal_angle_penalty = torch.where(torch.abs(heading_diff) > 2, -torch.abs(heading_diff*0.3*self.rew_scales['goal_angle_reward']), zero_reward.float())
