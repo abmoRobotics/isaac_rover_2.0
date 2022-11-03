@@ -46,7 +46,7 @@ from omniisaacgymenvs.tasks.utils.anymal_terrain_generator import *
 from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
 #from omniisaacgymenvs.tasks.utils.rover_terrain import *
 from omniisaacgymenvs.tasks.utils.rover_utils import *
-from omniisaacgymenvs.utils.kinematics import Ackermann
+from omniisaacgymenvs.utils.kinematics import Ackermann, Ackermann2
 from omniisaacgymenvs.utils.terrain_utils.terrain_generation import *
 from omniisaacgymenvs.utils.terrain_utils.terrain_utils import *
 from scipy.spatial.transform import Rotation as R
@@ -284,7 +284,7 @@ class RoverTask(RLTask):
         
         self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
         self.actions_nn = self.actions_nn
-        steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
+        steering_angles, motor_velocities = Ackermann2(_actions[:,0], _actions[:,1], self.device)
         
         # Create a n x 4 matrix for positions, where n is the number of environments/robots
         positions = torch.zeros((self._rover.count, 4), dtype=torch.float32, device=self._device)
@@ -294,10 +294,10 @@ class RoverTask(RLTask):
         positions[:, 0] = steering_angles[:,1] # Position of the front right(FR) motor.
         positions[:, 1] = steering_angles[:,5] # Position of the rear right(RR) motor.
         positions[:, 2] = steering_angles[:,0] # Position of the front left(FL) motor.
-        positions[:, 3] = steering_angles[:,4] # Position of the rear left(RL) motor.
-        velocities[:, 0] = motor_velocities[:,1] # Velocity FR
-        velocities[:, 1] = motor_velocities[:,3] # Velocity CR
-        velocities[:, 2] = motor_velocities[:,5] # Velocity RR
+        positions[:, 3] = -steering_angles[:,4] # Position of the rear left(RL) motor.
+        velocities[:, 0] = -motor_velocities[:,1] # Velocity FR
+        velocities[:, 1] = -motor_velocities[:,3] # Velocity CR
+        velocities[:, 2] = -motor_velocities[:,5] # Velocity RR
         velocities[:, 3] = motor_velocities[:,0] # Velocity FL
         velocities[:, 4] = motor_velocities[:,2] # Velocity CL
         velocities[:, 5] = motor_velocities[:,4] # Velocity RL
