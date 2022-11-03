@@ -443,7 +443,7 @@ class RoverTask(RLTask):
         num_sets = len(env_ids)
         self.generate_goals(env_ids, radius=3) # Generate goals
         envs_long = env_ids.long()
-        print("Terrain: " + str(self.terrain.heightsamples.shape))
+        #print("Terrain: " + str(self.terrain.heightsamples.shape))
         print(self.target_positions)
         global_pos = self.target_positions[env_ids, 0:2]#.add(self.env_origins_tensor[env_ids, 0:2])
         height= self.get_spawn_height(self.tensor_map, global_pos, self.horizontal_scale, self.vertical_scale, self.shift)
@@ -517,7 +517,7 @@ class RoverTask(RLTask):
         old_pos = None
         while not curr_pos == old_pos:
             # what is the purpose of env_origins here? -> can it get removed?
-            shifted_pos = curr_pos[:,0:2] - self.shift #.add(self.env_origins_tensor[:,0:2]) - self.shift 
+            shifted_pos = curr_pos[:,0:2] - self.shift[0:2] #.add(self.env_origins_tensor[:,0:2]) - self.shift 
             old_pos = curr_pos
             dist_rocks = torch.cdist(shifted_pos[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
             dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]                               # Calculate distance to nearest point of all rocks
