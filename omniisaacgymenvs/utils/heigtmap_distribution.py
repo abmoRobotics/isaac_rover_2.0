@@ -4,58 +4,72 @@ import numpy as np
 #import heigtmap_distribution
 import matplotlib.pyplot as plt
 import torch
+import operator
+import numpy as np
+import math
 
-def heightmap_distribution(x_limit, y_limit, square=False, y_start=0.296, delta=0, front_heavy=0, plot=True):
+def heightmap_distribution(plot=False):
+
+    # Define the borders of the area using lines. Define where points should be with respect to line.
+    border = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']] 
+    HDborder = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']] 
+    BeneathBorder = [[[0.32,0],[0.320,1],'left'],[[-0.320,0],[-0.320,1],'right'],[[-0.320,-0.5],[0.320,-0.5],'over'],[[-0.320,0.6],[0.320,0.6],'under']] 
+
+    delta_coarse = 0.2
+    delta_fine = 0.05
 
     point_distribution = []
 
-    # If delta variable not set, exit.
-    if delta == 0:
-        print("Need delta value!")
-        exit()
+    see_beneath = True
 
-    xd = 0
-    yd = 0
-
-    y = y_start
-    while y < y_limit:
+    # The coarse map
+    y = -10
+    while y < 10:
+    
+        x = -10
         
-        x = 0
+        while x < 10:
+            x += delta_coarse
+            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 5.0):
+                point_distribution.append([x, y])
 
-        delta += front_heavy
+        y += delta_coarse
 
-        flag = True
-        if square==False:
-            limit = limit_at_x(y)
-            if x_limit < limit_at_x(y):
-                limit = x_limit
-        else:
-            limit = x_limit
+    # The fine map
+    y = -10
+    while y < 10:
+    
+        x = -10
+        
+        while x < 10:
+            x += delta_fine
+            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 1.2):
+                if [x,y] not in point_distribution:
+                    point_distribution.append([x, y])
 
+        y += delta_fine
 
-        while x < limit:
+    if see_beneath:
+
+        y = -10
+        while y < 10:
+        
+            x = -10
             
-            if x < -limit:
-                x += delta
-                xd += 1
-                flag = False
+            while x < 10:
+                x += delta_fine
+                if inside_borders([x, y], BeneathBorder) and inside_circle([x, y], [0,0], 1.2):
+                    if [x,y] not in point_distribution:
+                        point_distribution.append([x, y])
 
-            if flag:
-                x -= delta
-                xd -= 1
-            else:
-                point_distribution.append([x, -y])
-                x += delta
-                xd += 1
+            y += delta_fine        
 
-        y += delta
-        yd +=1
+
 
     point_distribution = np.round(point_distribution, 4)
 
-    xd = (int)(xd/yd)*2-1
 
-    dim = [xd, yd]
+    print(len(point_distribution))
 
     if plot == True:
         fig, ax = plt.subplots()
@@ -63,24 +77,57 @@ def heightmap_distribution(x_limit, y_limit, square=False, y_start=0.296, delta=
         ax.set_aspect('equal')
         plt.show()
 
-    return dim, point_distribution
+    return point_distribution
 
-def limit_at_x(x):
-    return x*(4.3315)-0.129945
+def inside_borders(point, borderLines):
 
-def OuterLine(x):
-    y = -0.2308*x-0.03
-    return y
+    x, y = point
 
-def InnerLine(x):
-    y = 0.7641*x-0.405
-    return y
+    passCondition = True
 
-def heightmap_overlay(dim, point_distrubution):
-    zeros = torch.zeros_like(point_distrubution[:,0])
-    ones = torch.ones_like(point_distrubution[:,0])
-    belowOuter = point_distrubution[:,1] <= OuterLine(torch.abs(point_distrubution[:,0]))
-    belowInner = point_distrubution[:,1] <= InnerLine(torch.abs(point_distrubution[:,0]))
-    overlay = torch.where(belowInner, ones, zeros)
+    for line in borderLines:
+        a = np.subtract(line[0],line[1])
+        if a[0] == 0:
+            a = float("inf")
+        else:
+            a = a[1]/a[0]
+        
+        b = line[0][1]-a*line[0][0] # b = y - a*x
 
-    return overlay
+
+        if a == 0:
+            if y > b and line[2] == 'below':
+                passCondition = False
+            if y < b and line[2] == 'over':
+                passCondition = False
+            continue
+        
+        if a == float("inf"):
+            if x < line[0][0] and line[2] == 'right':
+                passCondition = False
+            if x > line[0][0] and line[2] == 'left':
+                passCondition = False
+            continue
+
+
+        if y < a*x+b and line[2] == 'over':
+            passCondition = False
+        if y > a*x+b and line[2] == 'below':
+            passCondition = False
+        if x < (y-b)/a and line[2] == 'right':
+            passCondition = False
+        if x < (y-b)/a and line[2] == 'left':
+            passCondition = False    
+
+    return passCondition
+
+def inside_circle(point, centre, radius):
+
+    point = np.subtract(point,centre)
+
+    dist = math.sqrt(point[0]**2 + point[1]**2)
+
+    if dist < radius:
+        return True
+    else:
+        return False

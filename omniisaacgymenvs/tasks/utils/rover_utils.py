@@ -1,7 +1,8 @@
 import torch
 import open3d as o3d
 import numpy as np
-
+import pymeshlab
+ms = pymeshlab.MeshSet()
 def ray_distance(sources: torch.Tensor, directions: torch.Tensor, triangles: torch.Tensor):
     # This is for multiple rays intersection with ONE triangle each
     # Sources: [n_rays, 3]
@@ -43,15 +44,15 @@ def ray_distance(sources: torch.Tensor, directions: torch.Tensor, triangles: tor
     
     return k_after_check
 
-def get_knn_triangles():
+def get_knn_triangles(file_name='terrainTest.ply', save_path='tasks/utils/terrain/knn_terrain/'):
     device = 'cuda:0'
     # Resolution of the knn map
     res_x = 1200 # 
     res_y = 1200 #
     res = 0.05 # 5 cm resolution
-
+    default_path = 'tasks/utils/terrain/'
     # Load mesh
-    input_file = "tasks/utils/terrainTest.ply"
+    input_file = default_path + file_name
     mesh = o3d.io.read_triangle_mesh(input_file) # Read the point cloud 
 
     # Get vertices and triangles from mesh
@@ -132,13 +133,13 @@ def get_knn_triangles():
     vertices = torch.tensor(vertices,device=device,dtype=torch.float16)
     triangles = torch.tensor(triangles,device=device,dtype=torch.int32)
 
-    torch.save(knn_indices, 'map_indices.pt')
-    torch.save(vertices, 'vertices.pt')
-    torch.save(triangles, 'triangles.pt')
+    torch.save(knn_indices, save_path + 'map_indices.pt')
+    torch.save(vertices, save_path + 'vertices.pt')
+    torch.save(triangles, save_path + 'triangles.pt')
 
     # Store with values in triangles
     knn_values =  vertices[triangles[knn_indices.long()].long()].to(torch.float16)
-    torch.save(knn_values, 'map_values.pt')
+    torch.save(knn_values, save_path + 'map_values.pt')
 
 def height_lookup(triangle_matrix: torch.Tensor, depth_points: torch.Tensor, horizontal_scale, shift):
     # Heightmap 1200x1200x100
@@ -171,9 +172,7 @@ def height_lookup(triangle_matrix: torch.Tensor, depth_points: torch.Tensor, hor
 
 def rover_spawn_height(heightmap: torch.Tensor, depth_points: torch.Tensor, horizontal_scale, vertical_scale, shift):
     # Scale locations to fit heightmap
-    print(depth_points)
-    print(shift)
-    print(horizontal_scale)
+
     scaledmap = (depth_points-shift)/horizontal_scale
     # Bound values inside the map
     scaledmap = torch.clamp(scaledmap, min = 0, max = heightmap.size()[0]-1)
@@ -208,6 +207,17 @@ def test_height_lookup():
     print(height_lookup(map_values,depth_points,horizontal,shift).shape)
     print(depth_points.shape)
 
+
+
+def load_terrain(file_name):
+    default_path = 'tasks/utils/terrain/'
+    ms.load_new_mesh(default_path + file_name)
+    m = ms.current_mesh()
+    # Get vertices as float32 (Supported by isaac gym)
+    vertices = m.vertex_matrix().astype('float32')
+    # Get faces as unit32 (Supported by isaac gym)
+    faces =  m.face_matrix().astype('uint32')
+    return vertices, faces
 #get_knn_triangles()
 # heightmap = torch.load("heightmap_tensor.pt")
 # # for i in range(1200):

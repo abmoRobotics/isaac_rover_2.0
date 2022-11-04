@@ -62,9 +62,10 @@ class Rover(Robot):
             #self._usd_path = assets_root_path + "/Projects/usd/exomy/exomy_model/exomy_model3.usd"
             #self._usd_path = assets_root_path + "/Projects/exomy/exomy_model3.usd"
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/Mars_Rover_2_COPY6.usd"
-            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/RoverS/test.usd"
+            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/RoverS/test.usd"
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/exomy_model.usd"
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/mars_rover_2_working.usd"
+            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified3.usd"
 
         add_reference_to_stage(self._usd_path, prim_path)   
         super().__init__(

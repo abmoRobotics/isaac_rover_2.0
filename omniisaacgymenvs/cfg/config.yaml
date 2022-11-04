@@ -49,6 +49,7 @@ wandb_project: 'omniisaacgymenvs'
 defaults:
   - task: Rover
   - train: ${task}PPO
+  - trainSKRL: ${task}PPOSKRL
   - hydra/job_logging: disabled
 
 # set the directory where the output files get saved
