@@ -10,3 +10,7 @@ omniisaacgymenvs/tasks/utils/map_indices.pt
 omniisaacgymenvs/tasks/utils/map_values.pt
 omniisaacgymenvs/tasks/utils/triangles.pt
 omniisaacgymenvs/tasks/utils/vertices.pt
+omniisaacgymenvs/tasks/utils/cameraBackup.py
+*.pt
+omniisaacgymenvs/tasks/utils/terrain/terrainTest.ply
+omniisaacgymenvs/tasks/utils/ray_castingbackup.py
