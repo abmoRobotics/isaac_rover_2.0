@@ -414,8 +414,10 @@ def read_stone_info(path):
     n = np.load(path)
     rs = np.zeros((len(n),1))
     for i in range(len(n)):
-        rs[i][0] = max(n[i][3], n[i][4]) / 2
+        rs[i][0] = max(n[i][3], n[i][4]) / 4
     n = np.append(n, rs, axis=1)
+    #print("STONES INFO: " + str(n[:,3:]))
+    #("STONE RADIUS: " + str(rs))
     return torch.from_numpy(n).cuda().float()
 
 
