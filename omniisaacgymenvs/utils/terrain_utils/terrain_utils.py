@@ -35,6 +35,10 @@ from math import sqrt
 
 from omni.isaac.core.prims import XFormPrim
 from pxr import UsdPhysics, Sdf, Gf, PhysxSchema
+from omni.physx import get_physx_scene_query_interface
+from omni.physx.scripts.physicsUtils import *
+
+
 
 
 def random_uniform_terrain(terrain, min_height, max_height, step=1, downsampled_scale=None,):
@@ -385,13 +389,36 @@ def add_terrain_to_stage(stage, vertices, triangles, position=None, orientation=
     physx_collision_api.GetRestOffsetAttr().Set(0.02)
 
 
+def add_stones_to_stage(stage, vertices, triangles, position=None, orientation=None):
+    num_faces = triangles.shape[0]
+    terrain_mesh = stage.DefinePrim("/World/stones", "Mesh")
+    terrain_mesh.GetAttribute("points").Set(vertices)
+    terrain_mesh.GetAttribute("faceVertexIndices").Set(triangles.flatten())
+    terrain_mesh.GetAttribute("faceVertexCounts").Set(np.asarray([3]*num_faces))
+    
+
+    stones = XFormPrim(prim_path="/World/stones",
+                        name="stones",
+                        position=position,
+                        orientation=orientation)
+
+    #UsdPhysics.CollisionAPI.Apply(stones.prim)
+    # collision_api = UsdPhysics.MeshCollisionAPI.Apply(terrain.prim)
+    # collision_api.CreateApproximationAttr().Set("meshSimplification")
+    #physx_collision_api = PhysxSchema.PhysxCollisionAPI.Apply(stones.prim)
+    #physx_collision_api.GetContactOffsetAttr().Set(0.04)
+    #physx_collision_api.GetRestOffsetAttr().Set(0.02)
+
+
 def read_stone_info(path):
     n = np.load(path)
     rs = np.zeros((len(n),1))
     for i in range(len(n)):
-        rs[i][0] = max(n[i][3], n[i][4]) / 2
+        rs[i][0] = max(n[i][3], n[i][4]) / 4
     n = np.append(n, rs, axis=1)
-    return torch.from_numpy(n)
+    #print("STONES INFO: " + str(n[:,3:]))
+    #("STONE RADIUS: " + str(rs))
+    return torch.from_numpy(n).cuda().float()
 
 
 class SubTerrain:
