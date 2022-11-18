@@ -37,7 +37,7 @@ import utils.terrain_utils.terrain_utils
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.objects import DynamicSphere
 from omni.isaac.core.prims import RigidPrimView
-from omni.isaac.core.utils.prims import get_prim_at_path
+from omni.isaac.core.utils.prims import *
 from omni.isaac.core.utils.stage import get_current_stage
 from omniisaacgymenvs.robots.articulations.rover import Rover
 from omniisaacgymenvs.robots.articulations.views.rover_view import RoverView
@@ -46,13 +46,14 @@ from omniisaacgymenvs.tasks.utils.anymal_terrain_generator import *
 from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
 #from omniisaacgymenvs.tasks.utils.rover_terrain import *
 from omniisaacgymenvs.tasks.utils.rover_utils import *
-from omniisaacgymenvs.utils.kinematics import Ackermann, Ackermann2
+from omniisaacgymenvs.utils.kinematics import Ackermann2
 from omniisaacgymenvs.utils.terrain_utils.terrain_generation import *
 from omniisaacgymenvs.utils.terrain_utils.terrain_utils import *
 from scipy.spatial.transform import Rotation as R
 from omni.isaac.debug_draw import _debug_draw
 from omniisaacgymenvs.tasks.utils.tensor_quat_to_euler import tensor_quat_to_eul
 from omniisaacgymenvs.tasks.utils.camera import Camera
+from omniisaacgymenvs.tasks.utils.rock_detect import Rock_Detection
 
 class Memory():
     def __init__(self,num_envs, num_states, horizon, device) -> None:
@@ -88,8 +89,9 @@ class RoverTask(RLTask):
     ) -> None:
         self._device = 'cuda:0'
         self.shift = torch.tensor([0 , 0, 0.0],device=self._device)
-        self.Camera= Camera(self._device,self.shift,debug=True)
+        self.Camera= Camera(self._device,self.shift,debug=False)
         self.num_exteroceptive = self.Camera.get_num_exteroceptive()
+        self.Rock_detector = Rock_Detection(self._device,self.shift,debug=True)
 
         # Define action space and observation space
         self._num_proprioceptive = 4
@@ -225,9 +227,9 @@ class RoverTask(RLTask):
         target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
         self.heading_diff = torch.atan2(target_vector[:,0] * direction_vector[:,1] - target_vector[:,1]*direction_vector[:,0],target_vector[:,0]*direction_vector[:,0]+target_vector[:,1]*direction_vector[:,1])
 
-
         #root_positions
         heightmap, output_pt, sources = self.Camera.get_depths(self.rover_positions,self.rover_rotation)
+        self.Rock_detector.get_depths(self.rover_positions,self.rover_rotation, self._rover.get_joint_positions())
         
 
         # This function is used for calculating the observations/input to the rover.
@@ -276,7 +278,7 @@ class RoverTask(RLTask):
         self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
         self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
 
-        # Code for running ExoMy in Ackermann mode
+        # Code for running in Ackermann mode
         _actions[:,0] = _actions[:,0] * 1.17 # max speed
         _actions[:,1] = _actions[:,1] * (1.17/0.58) # max speed / distance to wheel furthest away in meters
         #TODO remove
