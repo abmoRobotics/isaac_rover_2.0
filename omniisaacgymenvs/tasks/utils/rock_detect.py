@@ -142,14 +142,12 @@ class Rock_Detection():
 
     def _load_triangles_with_indices(self):
         """Loads triangles with indicies to vertices, each triangle is a 3D vector"""
-        rock_indices = torch.load("tasks/utils/terrain/knn_terrain/map_indices.pt")
+        rock_indices = torch.load("tasks/utils/terrain/knn_rocks/map_indices.pt")
         rock_indices  = rock_indices.swapaxes(0,1)
         rock_indices  = rock_indices.swapaxes(1,2)
-        triangles = torch.load("tasks/utils/terrain/knn_terrain/triangles.pt")
-        vertices = torch.load("tasks/utils/terrain/knn_terrain/vertices.pt")
+        triangles = torch.load("tasks/utils/terrain/knn_rocks/triangles.pt")
+        vertices = torch.load("tasks/utils/terrain/knn_rocks/vertices.pt")
         return rock_indices, triangles, vertices
-
-
 
     def _get_wheel_rays(self, positions, rotations, joint_states):
         """
@@ -344,7 +342,7 @@ class Rock_Detection():
 
 if __name__ == "__main__":
     a = torch.tensor([0.0,0.0],device='cuda:0')
-    cam = Camera('cuda:0', a)
+    cam = Rock_Detection('cuda:0', a)
     pos2 = torch.tensor([
             [6.5921, 5.5467, 0.6557],
             [5.4156, 4.4939, 0.7105],

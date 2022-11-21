@@ -44,7 +44,6 @@ from omniisaacgymenvs.robots.articulations.views.rover_view import RoverView
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from omniisaacgymenvs.tasks.utils.anymal_terrain_generator import *
 from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
-#from omniisaacgymenvs.tasks.utils.rover_terrain import *
 from omniisaacgymenvs.tasks.utils.rover_utils import *
 from omniisaacgymenvs.utils.kinematics import Ackermann2
 from omniisaacgymenvs.utils.terrain_utils.terrain_generation import *
@@ -93,15 +92,14 @@ class RoverTask(RLTask):
         self.vis_rocks = False
         self._device = 'cuda:0'
         self.shift = torch.tensor([0 , 0, 0.0],device=self._device)
-        self.Camera= Camera(self._device,self.shift,debug=False)
+        self.Camera = Camera(self._device,self.shift,debug=False)
         self.num_exteroceptive = self.Camera.get_num_exteroceptive()
-        self.Rock_detector = Rock_Detection(self._device,self.shift,debug=True)
+        self.Rock_detector = Rock_Detection(self._device,self.shift,debug=False)
 
         # Define action space and observation space
         self._num_proprioceptive = 4
         self._num_observations = self._num_proprioceptive + self.num_exteroceptive
         self._num_actions = 2
-
 
         #self._device = 'cpu'
         self._sim_config = sim_config
@@ -126,7 +124,6 @@ class RoverTask(RLTask):
             self._stone_ball_position = torch.zeros((len(self.stone_info), 3), device=self._device, dtype=torch.float32)
         self.shift2 = 5
         self.position_z_offset = None
-        # self._rover_position = torch.tensor([0, 0, 2])
         self.Camera= Camera(self._device,self.shift)
         self.stone_prim_path = "/World/stones"
 
@@ -135,9 +132,7 @@ class RoverTask(RLTask):
         self.angular_velocity = Memory(num_envs = self._num_envs, num_states = 1, horizon = 3,device=self._device)
 
         # Load reward weights
-        #print(self._task_cfg["rewards"])
         self.rew_scales = self._task_cfg["rewards"]
-        # self._rover_position = torch.tensor([0, 0, 2])
 
         self.save_teacher_data = True
         if self.save_teacher_data:
@@ -148,39 +143,18 @@ class RoverTask(RLTask):
             self.dataset_nr = 0
             self.reset_info = torch.zeros((self.num_envs))
         
-        #self.stone_info = utils.terrain_utils.terrain_utils.read_stone_info("/home/decamargo/Desktop/stone_info.npy")
-        # self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
-        # self.marker_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
-        # self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
-                # Previous actions and torques
+        # Previous actions and torques
         self.actions_nn = torch.zeros((self.num_envs, self._num_actions, 3), device=self._device)
         RLTask.__init__(self, name, env)
         return
 
 
     def _create_trimesh(self):
-        # terrain_width = 50 # terrain width [m]
-        # terrain_length = terrain_width # terrain length [m]
-        # horizontal_scale = 0.05 #0.025
-        #  # resolution per meter 
-        # self.heightfield = np.zeros((int(terrain_width/horizontal_scale), int(terrain_length/horizontal_scale)), dtype=np.int16)
-        # vertical_scale = 0.005 # vertical resolution [m]
-        #def new_sub_terrain(): return SubTerrain1(width=terrain_width,length=terrain_length,horizontal_scale=horizontal_scale,vertical_scale=vertical_scale)
-        #terrain = gaussian_terrain(new_sub_terrain(),0.5,0.0)
-        # terrain = gaussian_terrain(terrain,15,5)
-        # vertices, triangles = convert_heightfield_to_trimesh1(self.heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=None)
-        # rock_heigtfield, self.rock_positions = add_rocks_terrain(terrain=terrain)
-        # self.heightfield[0:int(terrain_width/horizontal_scale),:] = rock_heigtfield.height_field_raw
-        # vertices, triangles = convert_heightfield_to_trimesh1(self.heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=None)
-        #vertices, triangles = load_terrain('terrainTest.ply')
         vertices, triangles = load_terrain('map.fbx')
         v2, t2 = load_terrain('big_stones.fbx')
-        #triangles = self.terrain.triangles
         position = self.shift
         add_terrain_to_stage(stage=self._stage, vertices=vertices, triangles=triangles, position=position)  
         add_stones_to_stage(stage=self._stage, vertices=v2, triangles=t2, position=position)  
-        #self.height_samples = torch.tensor(self.terrain.heightsamples).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
-        #print(self.height_samples.shape)
         
     # Sets up the scene for the rover to navigate in
     def set_up_scene(self, scene) -> None:
@@ -197,9 +171,7 @@ class RoverTask(RLTask):
         super().set_up_scene(scene)
         self._rover = RoverView(prim_paths_expr="/World/envs/.*/Rover", name="rover_view")  # Creates an objects for the rover
         positions = self._rover.get_world_poses()[0]
-        #positions = positions.cpu()
         self.heightmap = torch.load("tasks/utils/heightmap_tensor.pt")
-        #heightmap = heightmap.to('cpu')
         self.horizontal_scale = 0.025
         self.vertical_scale = 1
         pre_col = positions.clone()
@@ -207,10 +179,8 @@ class RoverTask(RLTask):
         position = self.get_pos_height(self.heightmap, positions[:,0:2],self.horizontal_scale,self.vertical_scale,self.shift[0:2])
         self.position_z_offset = torch.ones(position.shape, device=self._device)
         positions[:,2] = torch.add(position, self.position_z_offset)
-        #zero_position = torch.zeros((self._num_envs,2),device=self._device)
-        self.initial_pos = positions#self._rover.get_world_poses()[0]
+        self.initial_pos = positions
         self._rover.set_world_poses(self.initial_pos, self._rover.get_world_poses()[1])
-        #print(self.initial_pos)
         self._balls = RigidPrimView(prim_paths_expr="/World/envs/.*/ball", name="targets_view", reset_xform_properties=False)   # Creates an object for the sphere
         if self.vis_rocks:
             self._stone_balls = []
@@ -220,7 +190,6 @@ class RoverTask(RLTask):
                 scene.add(self._stone_balls[-1])
         scene.add(self._balls)  # Adds the sphere to the scene
         scene.add(self._rover)  # Adds the rover to the scene
-        #self._rover.initialize()
         draw = _debug_draw.acquire_debug_draw_interface()
         points = [[0.0,0.0,0.0]]
         colors = [[0.0,1.0,0.0,0.5]]
@@ -264,11 +233,9 @@ class RoverTask(RLTask):
 
     def get_terrain(self):
         self.env_origins = torch.zeros((self.num_envs, 3), device=self.device, requires_grad=False)
-        if not self.curriculum: self._task_cfg["env"]["terrain"]["maxInitMapLevel"] = self._task_cfg["env"]["terrain"]["numLevels"] - 1
-        #self.terrain_levels = torch.randint(0, self._task_cfg["env"]["terrain"]["maxInitMapLevel"]+1, (self.num_envs,), device=self.device)
-        #self.terrain_types = torch.randint(0, self._task_cfg["env"]["terrain"]["numTerrains"], (self.num_envs,), device=self.device)
+        if not self.curriculum: 
+            self._task_cfg["env"]["terrain"]["maxInitMapLevel"] = self._task_cfg["env"]["terrain"]["numLevels"] - 1
         self._create_trimesh()  
-        #self.terrain_origins = torch.from_numpy(self.terrain.env_origins).to(self.device).to(torch.float)
 
 
     def get_observations(self) -> dict:
@@ -281,21 +248,20 @@ class RoverTask(RLTask):
         target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
         self.heading_diff = torch.atan2(target_vector[:,0] * direction_vector[:,1] - target_vector[:,1]*direction_vector[:,0],target_vector[:,0]*direction_vector[:,0]+target_vector[:,1]*direction_vector[:,1])
 
-        #root_positions
+        # Get heightmap info
         heightmap, output_pt, sources = self.Camera.get_depths(self.rover_positions,self.rover_rotation)
-        self.Rock_detector.get_depths(self.rover_positions,self.rover_rotation, self._rover.get_joint_positions())
-        
+
+        # Check which rovers should reset due to rock collision
+        rock_dist, rock_pt, rock_sources = self.Rock_detector.get_depths(self.rover_positions,self.rover_rotation, self._rover.get_joint_positions())
+        self.check_collision(rock_dist)
 
         # This function is used for calculating the observations/input to the rover.
         self.obs_buf[:, 0] = torch.linalg.norm(target_vector,dim=1) / 4
         self.obs_buf[:, 1] = (self.heading_diff) / math.pi
         self.obs_buf[:, 2] = self.linear_velocity.get_state(timestep=0)
         self.obs_buf[:, 3] = self.angular_velocity.get_state(timestep=0)
-
-        
         self.obs_buf[:, self._num_proprioceptive:self._num_observations ] = heightmap
 
-        
         # add curr timestep to big tensor
         if self.save_teacher_data:
             self.data_curr_timestep[:,3:] = self.obs_buf
@@ -327,18 +293,8 @@ class RoverTask(RLTask):
 
 
     def pre_physics_step(self, actions) -> None:
-        self.check_collision(self._rover.get_world_poses()[0])
-        #print(self._rover.get_local_poses()[0])
-        #print(self._rover.get_world_poses()[0])
-        #print(self.terrain_origins)
-        # Get the transformation data on rovers
-        #try:
-        #path_tuple = PhysicsSchemaTools.encodeSdfPath(Sdf.Path(self.stone_prim_path))         
-        #numHits = get_physx_scene_query_interface().overlap_mesh(path_tuple[0], path_tuple[1], self.report_hit, False) 
-
         self.rover_loc = self._rover.get_world_poses()[0]
         self.rover_rot = tensor_quat_to_eul(self._rover.get_world_poses()[1])
-        #time.sleep(2)
 
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
@@ -347,6 +303,7 @@ class RoverTask(RLTask):
             self.reset_idx(reset_env_ids)
             # Reset goal targets
             self.set_targets(reset_env_ids)
+        
         if self.save_teacher_data:
             self.data_curr_timestep[:,0] = self.reset_info[:]
         # Get action from model    
@@ -363,9 +320,6 @@ class RoverTask(RLTask):
         # Code for running in Ackermann mode
         _actions[:,0] = _actions[:,0] * 1.17 # max speed
         _actions[:,1] = _actions[:,1] * (1.17/0.58) # max speed / distance to wheel furthest away in meters
-        #TODO remove
-        _actions = _actions
-        
         
         self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
         self.actions_nn = self.actions_nn
@@ -387,18 +341,17 @@ class RoverTask(RLTask):
         velocities[:, 4] = motor_velocities[:,2] # Velocity CL
         velocities[:, 5] = motor_velocities[:,4] # Velocity RL
 
-
         # For debugging
         positions[:, 0] = 0 # Position of the front right(FR) motor.
         positions[:, 1] = 0 # Position of the rear right(RR) motor.
         positions[:, 2] = 0 # Position of the front left(FL) motor.
         positions[:, 3] = 0 # Position of the rear left(FL) motor.
-        velocities[:, 0] = -6.28/3 # Velocity FR
-        velocities[:, 1] = -6.28/3 # Velocity CR
-        velocities[:, 2] = -6.28/3 # Velocity RR
-        velocities[:, 3] = -6.28/3 # Velocity FL
-        velocities[:, 4] = -6.28/3 # Velocity CL
-        velocities[:, 5] = -6.28/3 # Velocity RL
+        velocities[:, 0] = -6.28/0.5 # Velocity FR
+        velocities[:, 1] = -6.28/0.5 # Velocity CR
+        velocities[:, 2] = -6.28/0.5 # Velocity RR
+        velocities[:, 3] = 6.28/0.5 # Velocity FL
+        velocities[:, 4] = 6.28/0.5 # Velocity CL
+        velocities[:, 5] = 6.28/0.5 # Velocity RL
 
         # Set position of the steering motors
         self._rover.set_joint_position_targets(positions,indices=None,joint_indices=self._rover.actuated_pos_indices)
@@ -406,46 +359,39 @@ class RoverTask(RLTask):
         self._rover.set_joint_velocity_targets(velocities,indices=None,joint_indices=self._rover.actuated_vel_indices)
 
     def reset_idx(self, env_ids):
-        #self.base_pos[env_ids] = self.base_init_state[0:3]
-        #self.base_pos = torch.zeros((self.num_envs, 3), dtype=torch.float, device=self.device)
+
         num_resets = len(env_ids)
-        # dof_pos = self.default_dof_pos[env_ids]
-        # dof_vel = velocities
-        # # randomize DOF positions
+        
         if self.save_teacher_data:
             self.reset_info[:] = 0
             self.reset_info[env_ids] = 1
+        
         reset_pos = torch.zeros((num_resets, 3), device=self._device)
         r = []
+
         # Generates a random orientation for each rover
         for i in range(num_resets):
-            #r.append(R.from_euler('z', (random.random() * 2 * math.pi), degrees=False).as_quat())
-            #r.append(R.from_euler('x', random.randint(0,360), degrees=True).as_quat())
-            r.append(R.from_euler('xyz', [0, 0, 0], degrees=False).as_quat())
-
+            r.append(R.from_euler('x', random.randint(0,360), degrees=True).as_quat())
+            #r.append(R.from_euler('xyz', [0, 0, 0], degrees=False).as_quat())
         reset_orientation = torch.tensor(r,device=self._device) # Convert quartenion to tensor
+
         indices = env_ids.to(dtype=torch.int32)
         dof_pos = torch.zeros((num_resets, 13), device=self._device)
         dof_vel = torch.zeros((num_resets, 13), device=self._device)
-        positions = torch.zeros((self._rover.count, 6), dtype=torch.float32, device=self._device)
-        # Create a n x 6 matrix for velocities
-        velocities = torch.zeros((self._rover.count,6), dtype=torch.float32, device=self._device)
         
-
-        # # apply resets    
+        # Apply resets    
         indices = env_ids.to(dtype=torch.int32)
         self._rover.set_joint_positions(dof_pos, indices=indices)
         self._rover.set_joint_velocities(dof_vel, indices=indices)
-        #self._rover.set_angular_velocities(positions, indices= indices)
-        #self._rover.set_linear_velocities(velocities, indices=indices)
-        #self.angular_velocity[indices,:]
+
         self.base_pos[env_ids] = self.initial_pos[env_ids]
         #self.base_pos[env_ids, :] += self.position_z_offset[env_ids, :]
 
         # Indicies of rovers to reset
         indices = env_ids.to(dtype=torch.int64) 
+
         # Set the position/orientation of the rover after reset
-        self._rover.set_world_poses(self.base_pos[indices], reset_orientation, indices)
+        self._rover.set_world_poses(self.base_pos[indices], reset_orientation.to(dtype=torch.float), indices)
 
         # Book keeping 
         self.reset_buf[env_ids] = 0
@@ -460,6 +406,7 @@ class RoverTask(RLTask):
 
     def calculate_metrics(self) -> None:
         # Function for calculating the reward functions
+
         # Tool tensors 
         zero_reward = torch.zeros_like(self.reset_buf)
         max_reward = torch.ones_like(self.reset_buf)
@@ -475,16 +422,11 @@ class RoverTask(RLTask):
         # Get rover boogie angles
         boogie_angles = self._rover.get_joint_positions()[:,0:3]
 
-        #
+        # Get rover goal heading difference
         heading_diff = self.heading_diff
 
         # Distance to target
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
-
-        # target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
-        # direction_vector = torch.zeros([ones.shape[0], 2], device='cuda:0')
-        # direction_vector[:,0] = torch.cos(self.rover_rotation[..., 2] - (math.pi/2)) # x value
-        # direction_vector[:,1] = torch.sin(self.rover_rotation[..., 2] - (math.pi/2)) # y value
 
         # Heading constraint - Avoid driving backwards
         lin_vel = self.linear_velocity.get_state(0)   # Get latest lin_vel
@@ -506,16 +448,11 @@ class RoverTask(RLTask):
         pos_reward = (1.0 / (1.0 + target_dist * target_dist)) * self.rew_scales['pos_reward']
         pos_reward = torch.where(target_dist <= 0.03, 1.03*(self.max_episode_length-self.progress_buf), pos_reward.float())  # reward for getting close to target
 
-        #TODO add collision penalty
+        # Calculate combined reward
         reward = pos_reward + heading_contraint_penalty + motion_contraint_penalty + goal_angle_penalty
-        #reward = pos_reward + collision_penalty + heading_contraint_penalty + motion_contraint_penalty  + heading_diff_reward + goal_angle_penalty
-        #reward = torch.where(torch.abs(cart_pos) > self._reset_dist, torch.ones_like(reward) * -2.0, reward)
-        #reward = torch.where(torch.abs(pole_angle) > np.pi / 2, torch.ones_like(reward) * -2.0, reward)
+        reward = torch.where(self.rock_collison == 1, reward-100, reward)
 
         self.rew_buf[:] = reward
-
-
-        # self.rew_buf[:] = reward_total
 
 
     def generate_goals(self,env_ids,radius=5):
@@ -546,11 +483,6 @@ class RoverTask(RLTask):
         self.target_positions[env_ids, 2] = height
         self._balls.set_world_poses(self.target_positions[envs_long], self.initial_ball_rot[envs_long].clone(), indices=env_ids)
 
-        #actor_indices = self.all_actor_indices[env_ids, 1].flatten()
-        #self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_sets)
-
-        #return actor_indices
-
     
     def get_pos_height(self, heightmap: torch.Tensor, depth_points: torch.Tensor, horizontal_scale, vertical_scale, shift):
         # Scale locations to fit heightmap
@@ -568,9 +500,6 @@ class RoverTask(RLTask):
 
         # Lookup heights in heightmap
         heights = heightmap[x, y]
-        # print(x)
-        # print("y")
-        # print(y)
         
         # Scale to fit actual height, dependent on resolution
         heights = heights * vertical_scale
@@ -581,13 +510,11 @@ class RoverTask(RLTask):
     def is_done(self) -> None:
         # Function that checks whether or not the rover should reset
 
-        # cart_pos = self.obs_buf[:, 0]
-        # pole_pos = self.obs_buf[:, 2]
-
         # resets = torch.where(torch.abs(cart_pos) > self._reset_dist, 1, 0)
         # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
         #resets = torch.zeros((self._num_envs, 1), device=self._device)
         resets = torch.where(self.progress_buf >= self.max_episode_length, 1, 0)
+        resets = torch.where(self.rock_collison == 1, torch.ones_like(self.reset_buf), resets)
         self.reset_buf[:] = resets
 
 
@@ -601,17 +528,12 @@ class RoverTask(RLTask):
             dist_rocks = torch.cdist(curr_pos[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
             dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]     
             #print("Dist nearest rocks: " + str(dist_rocks))                          # Calculate distance to nearest point of all rocks
-            nearest_rock = torch.min(dist_rocks,dim=1)[0]                      # Find the closest rock to each robot
+            nearest_rock = torch.min(dist_rocks,dim=1)[0]                             # Find the closest rock to each robot
             #print("Dist nearest rock: " + str(nearest_rock)) 
             curr_pos[:,0] = torch.where(nearest_rock[:] <= 1.2,torch.add(curr_pos[:,0], 0.05),curr_pos[:,0])
         return curr_pos
 
-    
-    def check_collision(self, curr_pos):
-        dist_rocks = torch.cdist(curr_pos[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
-        dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]                          # Calculate distance to nearest point of all rocks
-        nearest_rock = torch.min(dist_rocks,dim=1)[0]            # Find the closest rock to each robot
-        for n in range(len(nearest_rock)):
-            if nearest_rock[n] <= 0.15:
-                print("Stone too close: resetting rover.")
-                self.reset_buf[n] = 1
+    def check_collision(self, rock_rays):
+        rock_rays = torch.where(rock_rays < -10, torch.ones_like(rock_rays)*99, rock_rays )
+        nearest_rock = torch.min(rock_rays,dim=1)[0]            # Find the closest rock to each robot
+        self.rock_collison = torch.where(torch.abs(nearest_rock) < 0.8, torch.ones_like(self.reset_buf), torch.zeros_like(self.reset_buf))

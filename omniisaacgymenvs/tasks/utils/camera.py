@@ -145,31 +145,26 @@ class Camera():
 
     def _load_triangles(self):
         """Loads triangles with explicit values, each triangle is a 3 x 3 matrix"""
-        map_values = torch.load("tasks/utils/terrain/knn_terrain/map_values.pt")
+        map_values = torch.load("tasks/utils/terrain/knn_terrain2/map_values.pt")
         map_values=map_values.swapaxes(0,1)
         map_values=map_values.swapaxes(1,2)
         return map_values
 
     def _load_triangles_with_indices(self):
         """Loads triangles with indicies to vertices, each triangle is a 3D vector"""
-        map_indices = torch.load("tasks/utils/terrain/knn_terrain/map_indices.pt")
+        map_indices = torch.load("tasks/utils/terrain/knn_terrain2/map_indices.pt")
         map_indices  = map_indices.swapaxes(0,1)
         map_indices  = map_indices.swapaxes(1,2)
-        triangles = torch.load("tasks/utils/terrain/knn_terrain/triangles.pt")
-        vertices = torch.load("tasks/utils/terrain/knn_terrain/vertices.pt")
+        triangles = torch.load("tasks/utils/terrain/knn_terrain2/triangles.pt")
+        vertices = torch.load("tasks/utils/terrain/knn_terrain2/vertices.pt")
         return map_indices, triangles, vertices
 
 
 
     def _depth_transform(self, rover_l, rover_r, rover_depth_points):
-        """Transforms the local heightmap of the rover, into the global frame
-        
-
-        """
+        """Transforms the local heightmap of the rover, into the global frame"""
         # X:0, Y:1, Z:2
-        # rover_r = rover_r.cpu()
-        # rover_l = rover_l.cpu()
-        # rover_depth_points = rover_depth_points.cpu()
+
         # Get number of points and number of robots from input
         num_points = rover_depth_points.size()[0] + 1 # +1 to add plane-normal
         num_robots = rover_r.size()[0]
@@ -207,14 +202,12 @@ class Camera():
         y = (y_p[:,num_points-1]-rover_l[:, 1]).unsqueeze(1)
         z = (z_p[:,num_points-1]-rover_l[:, 2]).unsqueeze(1)
         rover_dir = torch.cat((x, y, z),1).unsqueeze(1)
-        
-        
+     
         rover_dir = rover_dir.repeat(1,num_points-1,1)#.swapaxes(0,1)
+        
         #Stack points in a [x, y, 3] matrix, and return
         sources = torch.stack((x_p[:,0:num_points-1], y_p[:,0:num_points-1], z_p[:,0:num_points-1]), 2)
-        # print(sources.shape)
-        # print(rover_dir.shape)
-        #print(rover_dir)
+
         return sources.type(self.dtype), rover_dir.type(self.dtype)
 
     def _plot_mesh(self, triangles_with_indices):
