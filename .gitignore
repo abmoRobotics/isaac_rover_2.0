@@ -17,3 +17,7 @@ omniisaacgymenvs/tasks/utils/terrain/knn_terrain/vertices.pt
 omniisaacgymenvs/tasks/utils/terrain.ply
 omniisaacgymenvs/tasks/utils/cameraBackup.py
 omniisaacgymenvs/tasks/utils/ray_castingbackup.py
+*.pt
+*.fbx
+*.ply
+*.npy
