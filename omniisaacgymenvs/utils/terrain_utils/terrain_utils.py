@@ -396,7 +396,6 @@ def add_stones_to_stage(stage, vertices, triangles, position=None, orientation=N
     terrain_mesh.GetAttribute("primvars:displayColor").Set(np.array([1.0, 0.0, 0.0]))
     terrain_mesh.GetAttribute("faceVertexIndices").Set(triangles.flatten())
     terrain_mesh.GetAttribute("faceVertexCounts").Set(np.asarray([3]*num_faces))
-    terrain_mesh.GetAttribute("faceVertexCounts").Set(np.asarray([3]*num_faces))
     
 
     stones = XFormPrim(prim_path="/World/stones",
