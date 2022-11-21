@@ -18,7 +18,7 @@ def Ackermann2(lin_vel, ang_vel, device):
     num_robots = lin_vel.shape[0]
     wheel_diameter = 0.2
 
-    # Locations of the wheels, with respect to center(between middle wheels) (Y is forward, X is right)
+    # Locations of the wheels, with respect to center(between middle wheels) (X is right, Y is forward)
     wheel_FL = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.385],[0.438]],  device=device).repeat(1,num_robots), 0, 1),0)
     wheel_FR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.385],[0.438]],   device=device).repeat(1,num_robots), 0, 1),0)
     wheel_ML = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.447],[0.0]],    device=device).repeat(1,num_robots), 0, 1),0)
