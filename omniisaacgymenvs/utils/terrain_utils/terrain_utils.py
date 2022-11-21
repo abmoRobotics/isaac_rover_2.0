@@ -393,6 +393,7 @@ def add_stones_to_stage(stage, vertices, triangles, position=None, orientation=N
     num_faces = triangles.shape[0]
     terrain_mesh = stage.DefinePrim("/World/stones", "Mesh")
     terrain_mesh.GetAttribute("points").Set(vertices)
+    terrain_mesh.GetAttribute("primvars:displayColor").Set(np.array([1.0, 0.0, 0.0]))
     terrain_mesh.GetAttribute("faceVertexIndices").Set(triangles.flatten())
     terrain_mesh.GetAttribute("faceVertexCounts").Set(np.asarray([3]*num_faces))
     
