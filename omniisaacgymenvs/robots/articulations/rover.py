@@ -55,26 +55,20 @@ class Rover(Robot):
             #assets_root_path = get_assets_root_path()
             assets_root_path = "http://localhost:8080/omniverse://127.0.0.1/"
             #assets_root_path = "http://100.127.177.125:8080/omniverse://100.127.177.125"
-           # assets_root_path = "./"
-            print(assets_root_path)
-            print("tester")
+            # print(assets_root_path)
             if assets_root_path is None:
                 carb.log_error("Could not find Isaac Sim assets folder")
             #self._usd_path ="/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Projects/usd/exomy/exomy_model/cartpole.usd" #"http://localhost:8080/omniverse://100.127.177.125/Projects/usd/exomy/exomy_model/Cartpole.usd"#"./cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"#/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"
             #self._usd_path = assets_root_path + "/Projects/usd/exomy/exomy_model/exomy_model3.usd"
             #self._usd_path = assets_root_path + "/Projects/exomy/exomy_model3.usd"
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/Mars_Rover_2_COPY6.usd"
-            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/RoverS/test.usd"
+            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/RoverS/test.usd"
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/exomy_model.usd"
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/mars_rover_2_working.usd"
+            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified3.usd"
+            #self._usd_path = "robots/articulations/simplified3.usd"
 
-        print("hej")
-        print(self._usd_path)
-        print(prim_path)
         add_reference_to_stage(self._usd_path, prim_path)   
-        print("hej") 
-        print(self._usd_path)
-        print(prim_path)
         super().__init__(
             prim_path=prim_path,
             name=name,
