@@ -9,13 +9,13 @@ network:
     activation: leakyrelu
     
 config:
-  rollouts: 60
+  rollouts: 30
   learning_epochs: 4
-  mini_batches: 4
+  mini_batches: 30
   discount_factor: 0.99
   lambda: 0.95
 
-  learning_rate: 1e-3
+  learning_rate: 1e-4
 
   grad_norm_clip: 1.0
   ratio_clip: 0.2
@@ -28,8 +28,8 @@ config:
   kl_threshold: 0.008
 
 experiment:
-  write_interval: 100
-  checkpoint_interval: 1000
+  write_interval: 50
+  checkpoint_interval: 100
   timesteps: 50000
   headless: True
 

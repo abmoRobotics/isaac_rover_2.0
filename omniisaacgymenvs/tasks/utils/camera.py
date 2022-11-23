@@ -38,10 +38,11 @@ class Camera():
         debug : bool, optional
             Enables debugging functionalities (default is False)
         """
+        
         self.debug = debug
         self.device = device    
         self.partition = True    
-        self.num_partitions = 1 # Slices the input data to reduce VRAM usage. 
+        self.num_partitions = 10 # Slices the input data to reduce VRAM usage. 
         self.horizontal = 0.1  # Resolution of the triangle map
         #self.map_values = self._load_triangles()    # Load triangles into an [1200,1200, 100, 3, 3] array
         self.map_indices, self.triangles, self.vertices = self._load_triangles_with_indices()   # Load into [1200,1200, 100, 3] array
@@ -68,20 +69,23 @@ class Camera():
         depth_points = sources[:,:,0:2]
         triangles,triangles_with_indices = self._height_lookup(self.map_indices,depth_points,self.horizontal,self.shift)
         self.initialmemory = torch.cuda.memory_reserved(0)
-        triangles = self.vertices[self.triangles[triangles_with_indices.long()].long()]
+        #triangles = self.vertices[self.triangles[triangles_with_indices.long()].long()]
+        self.initialmemory2 = torch.cuda.memory_reserved(0)
         # We partition the data to reduce VRAM usage
         if self.partition:
-            partitions = self.num_partitions
+            partitions = self.num_partitions 
             output_distances = None
-            for i in range(partitions):
+            for i in range(partitions if sources.shape[1]%partitions == 0 else partitions + 1):
+                if i == partitions + 1:
+                    step_size = int(sources.shape[1]%partitions)
                 step_size = int(sources.shape[1]/partitions)
-         
-          
+                triangles = self.vertices[self.triangles[triangles_with_indices[:,i*step_size:i*step_size+step_size].long()].long()]
+
                 s = sources[:,i*step_size:i*step_size+step_size]
      
                 d = directions[:,i*step_size:i*step_size+step_size]
-                t = triangles[:,i*step_size:i*step_size+step_size]
-       
+                #t = triangles[:,i*step_size:i*step_size+step_size]
+                t = triangles
                 dim0, dim1, dim2 = s.shape[0], s.shape[1], s.shape[2]
                 t_dim0, t_dim1, t_dim2, t_dim3, t_dim4 = t.shape[0], t.shape[1], t.shape[2], t.shape[3], t.shape[4]
       
@@ -94,7 +98,8 @@ class Camera():
                 d = d.repeat(1,1,t_dim2)
                 d = d.reshape(dim0*dim1*t_dim2,dim2)
                 #d = d.repeat(t_dim2,1)
-    
+                
+                self.initialmemory3 = torch.cuda.memory_reserved(0)
                 t2 = t.reshape(t_dim0*t_dim1,t_dim2,t_dim3,t_dim4)
      
                 t = t.reshape(t_dim0*t_dim1*t_dim2,t_dim3,t_dim4)
@@ -102,10 +107,12 @@ class Camera():
          
                 #torch.save(t,'tritest.pt')
                 #torch.save(s, 'sourcetest.pt')
-                self.initialmemory2 = torch.cuda.memory_reserved(0)
                 
+                #print(self.initialmemory/1000000000.0)
                 distances,pt = ray_distance(s,d,t)
-                self.initialmemory3 = torch.cuda.memory_reserved(0)
+                
+                #print(self.initialmemory2/1000000000.0)
+                #print(self.initialmemory3/1000000000.0)
                 distances = distances.reshape(dim0,dim1,t_dim2)
      
                 pt = pt.reshape(dim0,dim1,t_dim2,3)
@@ -118,13 +125,14 @@ class Camera():
                 pt = pt.squeeze(dim=2)
                # pt = pt[:,:,indices]
                 #distances = distances.reshape(dim0,dim1)
-
+                
                 if output_distances is None:
                     output_distances = distances.clone().detach()#torch.tensor(distances,device=self.device,)
                     output_pt = pt.clone().detach()#torch.tensor(pt,device=self.device,)
-                else: 
+                else:
                     output_distances = torch.cat((output_distances,distances),1)
                     output_pt = torch.cat((output_pt,pt),1)
+                
 
         else:
             dim0, dim1, dim2 = sources.shape[0], sources.shape[1], sources.shape[2]
@@ -136,7 +144,8 @@ class Camera():
         
         d1,d2,d3 = sources.shape[0],sources.shape[1] ,sources.shape[2] 
         #print((self.initialmemory3 - torch.cuda.memory_reserved(0))/1_000_000_000)
-        self.debug = True
+        #self.debug = True
+        
         if self.debug:
             try:
                 draw_depth(sources.reshape(d1*d2,d3),output_pt.reshape(d1*d2,d3))
@@ -146,18 +155,18 @@ class Camera():
 
     def _load_triangles(self):
         """Loads triangles with explicit values, each triangle is a 3 x 3 matrix"""
-        map_values = torch.load("tasks/utils/terrain/knn_terrain2/map_values.pt")
+        map_values = torch.load("tasks/utils/terrain/knn_terrain/map_values.pt")
         map_values=map_values.swapaxes(0,1)
         map_values=map_values.swapaxes(1,2)
         return map_values
 
     def _load_triangles_with_indices(self):
         """Loads triangles with indicies to vertices, each triangle is a 3D vector"""
-        map_indices = torch.load("tasks/utils/terrain/knn_terrain2/map_indices.pt")
+        map_indices = torch.load("tasks/utils/terrain/knn_terrain/map_indices.pt")
         map_indices  = map_indices.swapaxes(0,1)
         map_indices  = map_indices.swapaxes(1,2)
-        triangles = torch.load("tasks/utils/terrain/knn_terrain2/triangles.pt")
-        vertices = torch.load("tasks/utils/terrain/knn_terrain2/vertices.pt")
+        triangles = torch.load("tasks/utils/terrain/knn_terrain/triangles.pt")
+        vertices = torch.load("tasks/utils/terrain/knn_terrain/vertices.pt")
         return map_indices, triangles, vertices
 
 
@@ -281,5 +290,5 @@ if __name__ == "__main__":
             [-0.0114,  0.0963, -0.0064],
             [-0.0706, -0.0316,  0.0137]], device='cuda:0',dtype=torch.float16)
 
-    output_distances, output_pt, sources = cam.get_depths(pos2.repeat(100,1),rotations2.repeat(100,1))
+    output_distances, output_pt, sources = cam.get_depths(pos2.repeat(300,1),rotations2.repeat(300,1))
     print(output_distances.shape)
