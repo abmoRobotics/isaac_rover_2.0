@@ -60,8 +60,6 @@ from omni.physx.scripts.physicsUtils import *
 
 class Memory():
     def __init__(self,num_envs, num_states, horizon, device) -> None:
-        #print(num_envs)
-        #print(num_states)
         self.tracker = torch.zeros((num_envs, num_states, horizon), device=device)
         self.device = device
         self.num_envs = num_envs
@@ -261,7 +259,6 @@ class RoverTask(RLTask):
         self.obs_buf[:, 3] = self.angular_velocity.get_state(timestep=0) / 3
         self.obs_buf[:, self._num_proprioceptive:self._num_observations ] = heightmap * 0
         
-        #print(self.obs_buf[:, 0]*4)
         # add curr timestep to big tensor
         if self.save_teacher_data:
             self.data_curr_timestep[:,3:] = self.obs_buf
@@ -311,7 +308,7 @@ class RoverTask(RLTask):
         if self.save_teacher_data:
             self.data_curr_timestep[:,1] = _actions[:,0]
             self.data_curr_timestep[:,2] = _actions[:,1]
-
+        #print(_actions)
         # Track states
         self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
         self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
@@ -440,7 +437,7 @@ class RoverTask(RLTask):
         penalty1 = torch.where((torch.abs(lin_vel * 3 - 3 * lin_vel_prev) > 0.05), torch.square(torch.abs(lin_vel * 3 - 3 * lin_vel_prev)),zero_reward.float())
         penalty2 = torch.where((torch.abs(ang_vel * 3 - 3 * ang_vel_prev) > 0.05), torch.square(torch.abs(ang_vel * 3 - 3 * ang_vel_prev)),zero_reward.float())
         motion_contraint_penalty =  torch.pow(penalty1,2) * self.rew_scales["motion_contraint_reward"]
-        #print(motion_contraint_penalty.mean())
+        
         motion_contraint_penalty = motion_contraint_penalty+(torch.pow(penalty2,2)) * self.rew_scales["motion_contraint_reward"]
 
         # distance to target
@@ -538,7 +535,6 @@ class RoverTask(RLTask):
         resets = torch.where(self.rover_rot[:,1] >= 0.78*1.5, ones, resets)
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
         resets = torch.where(target_dist >= 4.5, ones, resets)
-        
         #resets = torch.where(self.rock_collison == 1, torch.ones_like(self.reset_buf), resets)
         self.reset_buf[:] = resets
 
