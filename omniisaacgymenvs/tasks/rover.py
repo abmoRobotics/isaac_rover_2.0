@@ -528,15 +528,16 @@ class RoverTask(RLTask):
 
     def is_done(self) -> None:
         # Function that checks whether or not the rover should reset
-
+        ones = torch.ones_like(self.progress_buf)
+        zeros = torch.zeros_like(self.progress_buf)
         # resets = torch.where(torch.abs(cart_pos) > self._reset_dist, 1, 0)
         # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
         #resets = torch.zeros((self._num_envs, 1), device=self._device)
-        resets = torch.where(self.progress_buf >= self.max_episode_length, 1, 0)
-        resets = torch.where(self.rover_rot[:,0] >= 0.78*1.5, 1, resets)
-        resets = torch.where(self.rover_rot[:,1] >= 0.78*1.5, 1, resets)
+        resets = torch.where(self.progress_buf >= self.max_episode_length, ones, zeros)
+        resets = torch.where(self.rover_rot[:,0] >= 0.78*1.5, ones, resets)
+        resets = torch.where(self.rover_rot[:,1] >= 0.78*1.5, ones, resets)
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
-        resets = torch.where(target_dist >= 4.5, 1, resets)
+        resets = torch.where(target_dist >= 4.5, ones, resets)
         
         #resets = torch.where(self.rock_collison == 1, torch.ones_like(self.reset_buf), resets)
         self.reset_buf[:] = resets
