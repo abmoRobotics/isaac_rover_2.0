@@ -85,8 +85,8 @@ def run_simulation(cfg_ppo, cfg_network, cfg_experiment):
 class TrainerSKRL():
     def __init__(self):
         self._load_cfg()
-        self.wandb_group = "test-group"
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.wandb_group =f"test-group_{time_str}"
         self.wandb_name = f"test-run_{time_str}"
        # self.start_simulation()
         #self.start_training()
@@ -104,6 +104,7 @@ class TrainerSKRL():
         for param, value in (cfg.trainSKRL.config).items():
             self.cfg_ppo[param] = value
         
+        print(self.cfg_ppo)
         hydra.core.global_hydra.GlobalHydra.instance().clear()
 
     def start_simulation(self):
@@ -116,7 +117,7 @@ class TrainerSKRL():
 
         
         # Instantiate a RandomMemory as rollout buffer (any memory can be used for this)
-        memory = RandomMemory(memory_size=60, num_envs=self.env.num_envs, device=device)
+        memory = RandomMemory(memory_size=30, num_envs=self.env.num_envs, device=device)
 
         # Get values from cfg
         mlp_layers = self.cfg_network.mlp.layers
@@ -130,7 +131,8 @@ class TrainerSKRL():
         # Instantiate parameters of the model
         for model in models_ppo.values():
             model.init_parameters(method_name="normal_", mean=0.0, std=0.05)
-
+        
+        self.cfg_ppo["experiment"]["write_interval"] = 50
         # Define agent
         agent = PPO(models=models_ppo,
                 memory=memory,
@@ -141,7 +143,7 @@ class TrainerSKRL():
         
 
         # Configure and instantiate the RL trainer
-        cfg_trainer = {"timesteps": 4000, "headless": True}
+        cfg_trainer = {"timesteps": 1000000, "headless": True}
         trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
         # start training

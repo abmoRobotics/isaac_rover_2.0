@@ -5,8 +5,8 @@ physics_engine: ${..physics_engine}
 
 # if given, will override the device setting in gym. 
 env:
-  numEnvs: ${resolve_default:4,${...num_envs}}
-  envSpacing: 3
+  numEnvs: ${resolve_default:128,${...num_envs}}
+  envSpacing: 1.4
   resetDist: 3.0
   maxEffort: 400.0
 
@@ -36,12 +36,12 @@ rewards:
   pos_reward: 1.0
   collision_reward: 0.3
   heading_contraint_reward: 0.1 #0.05
-  motion_contraint_reward: -0.01  #0.005
+  motion_contraint_reward: -0.005 #15 #0.01 #0.005
   goal_angle_reward: 0.1
   boogie_contraint_reward: 0.5
   
 sim:
-  dt: 0.01 #0.0083 # 1/120 s
+  dt: 0.05 #0.0083 # 1/120 s
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   up_axis: "z"
   gravity: [0.0, 0.0, -9.81]
