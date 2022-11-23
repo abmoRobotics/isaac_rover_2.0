@@ -240,12 +240,10 @@ class RoverTask(RLTask):
         # Calculate
 
         direction_vector = torch.zeros([self.num_envs, 2], device=self._device)
-        direction_vector[:,0] = torch.cos(self.rover_rotation[..., 2] - (math.pi/2)) # x value
-        direction_vector[:,1] = torch.sin(self.rover_rotation[..., 2] - (math.pi/2)) # y value
+        direction_vector[:,0] = torch.cos(self.rover_rotation[..., 2])  # x value
+        direction_vector[:,1] = torch.sin(self.rover_rotation[..., 2])  # y value
         target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
-        #self.heading_diff = torch.atan2(target_vector[:,0] * direction_vector[:,1] - target_vector[:,1]*direction_vector[:,0],target_vector[:,0]*direction_vector[:,0]+target_vector[:,1]*direction_vector[:,1])
-        self.heading_diff = torch.atan2(target_vector[:,1] * direction_vector[:,1] - target_vector[:,0]*direction_vector[:,0],target_vector[:,1]*direction_vector[:,0]+target_vector[:,0]*direction_vector[:,1])
-
+        self.heading_diff = -torch.atan2(target_vector[:,0] * direction_vector[:,1] - target_vector[:,1]*direction_vector[:,0],target_vector[:,0]*direction_vector[:,0]+target_vector[:,1]*direction_vector[:,1])
 
         # Get heightmap info
         heightmap, output_pt, sources = self.Camera.get_depths(self.rover_positions,self.rover_rotation)
