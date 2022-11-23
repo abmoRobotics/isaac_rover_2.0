@@ -463,9 +463,9 @@ class RoverTask(RLTask):
     def check_goal_collision(self, env_ids):
         ones = torch.ones_like(env_ids)
         zeros = torch.zeros_like(env_ids)
-        dist_rocks = torch.cdist(self.target_positions[:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
+        dist_rocks = torch.cdist(self.target_positions[env_ids][:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
         dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]  
-        nearest_rock = torch.min(dist_rocks,dim=1)[0] 
+        nearest_rock = torch.min(dist_rocks,dim=1)[0]
         reset_buf = torch.where(nearest_rock <= 0.2, ones, zeros)
         env_ids = reset_buf * env_ids   # Multiply reset buffer with env_ids in order to get reset ids
         reset_buf_len = len(reset_buf.nonzero(as_tuple=False).squeeze(-1))  # Get number of non-zero values in the reset buffer
