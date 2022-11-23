@@ -317,12 +317,12 @@ class RoverTask(RLTask):
         self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
 
         # Code for running in Ackermann mode
-        _actions[:,0] = _actions[:,0] * 3 #1.17 # max speed
-        _actions[:,1] = _actions[:,1] * 3 # 1.17#(1.17/0.58) # max speed / distance to wheel furthest away in meters
+        _actions[:,0] = _actions[:,0] * 9 #1.17 # max speed
+        _actions[:,1] = _actions[:,1] * 9 # 1.17#(1.17/0.58) # max speed / distance to wheel furthest away in meters
         self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
         self.actions_nn = self.actions_nn
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
-        #steering_angles, motor_velocities = Ackermann2(torch.ones_like(_actions[:,0]), torch.ones_like(_actions[:,1])*(-3.0), self.device)
+        #steering_angles, motor_velocities = Ackermann(torch.ones_like(_actions[:,0])*0.8*3, torch.ones_like(_actions[:,1])*3*3)
         
         #steering_angles, motor_velocities = Ackermann2(_actions[:,0]*0.0, abs(_actions[:,1]), self.device)
         # Create a n x 4 matrix for positions, where n is the number of environments/robots

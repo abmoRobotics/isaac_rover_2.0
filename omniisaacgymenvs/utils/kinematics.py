@@ -127,7 +127,7 @@ def Ackermann(lin_vel, ang_vel):
     motor_velocities[:,4] = torch.where(velocity_condition4, lin_vel, motor_velocities[:,4])
     motor_velocities[:,5] = torch.where(velocity_condition4, lin_vel, motor_velocities[:,5])
     
-    return steering_angles, motor_velocities
+    return -steering_angles, motor_velocities
 
 # This is the new kinematics function
 # The inputs are m/s and rad/s. The dimensions are for the mars rover 2.0 project - units in meters.
