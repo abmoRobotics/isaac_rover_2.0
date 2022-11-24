@@ -252,7 +252,7 @@ def polygon_reduction(vertices, triangles, target_vertices=50000):
 
         # Save final mesh
         m = ms.current_mesh()
-        ms.save_current_mesh('terrain.ply')
+        ms.save_current_mesh('terrainNEW50000.ply')
         # Get vertices as float32 (Supported by isaac gym)
         vertices = m.vertex_matrix().astype('float32')
         print(len(vertices))
@@ -391,7 +391,7 @@ def _create_ground_plane():
         #terrain.height_field_raw += np.random.rand(len(terrain.height_field_raw[0]),len(terrain.height_field_raw[1]))
         terrain = gaussian_terrain(terrain,15,5)
         terrain = gaussian_terrain(terrain,3,0.2)
-        #terrain = gaussian_terrain(terrain,0.5,0.1)
+        terrain = gaussian_terrain(terrain,0.5,0.1)
         #terrain = gaussian_terrain(terrain,0.2,0.05)
 
         #heightfield[0:int(terrain_width/horizontal_scale),:]= gaussian_terrain(new_sub_terrain()).height_field_raw
@@ -402,7 +402,7 @@ def _create_ground_plane():
         vertices, triangles = convert_heightfield_to_trimesh1(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=None)
         # Decimate mesh and reduce number of vertices
         print(vertices.shape)
-        vertices, triangles = polygon_reduction(vertices, triangles, target_vertices=400000)
+        vertices, triangles = polygon_reduction(vertices, triangles, target_vertices=50000)
         return vertices, triangles
 
 if __name__=="__main__":

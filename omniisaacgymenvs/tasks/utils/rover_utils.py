@@ -44,13 +44,18 @@ def ray_distance(sources: torch.Tensor, directions: torch.Tensor, triangles: tor
     
     return k_after_check
 
-def get_knn_triangles(file_name='bigstones.ply', save_path='tasks/utils/terrain/knn_rocks/'):
+
+def generate_knn_triangles():
+    _get_knn_triangles(file_name='map.ply', save_path='tasks/utils/terrain/knn_terrain/',res_x=600, res_y=600,res=0.1,n_triangles=200)
+    _get_knn_triangles(file_name='big_stones.ply', save_path='tasks/utils/terrain/knn_rocks/',res_x=600, res_y=600,res=0.1,n_triangles=200)
+
+def _get_knn_triangles(file_name, save_path,res_x=1200, res_y=1200,res=0.05,n_triangles=100):
     device = 'cuda:0'
     # Resolution of the knn map
-    res_x = 1200 # 
-    res_y = 1200 #
-    res = 0.05 # 5 cm resolution
-    n_triangles = 100
+    res_x = res_x # 
+    res_y = res_y #
+    res = res # 5 cm resolution
+    n_triangles = n_triangles
     default_path = 'tasks/utils/terrain/'
     # Load mesh
     input_file = default_path + file_name
@@ -139,8 +144,9 @@ def get_knn_triangles(file_name='bigstones.ply', save_path='tasks/utils/terrain/
     torch.save(triangles, save_path + 'triangles.pt')
 
     # Store with values in triangles
-    knn_values =  vertices[triangles[knn_indices.long()].long()].to(torch.float16)
-    torch.save(knn_values, save_path + 'map_values.pt')
+    if False:
+        knn_values =  vertices[triangles[knn_indices.long()].long()].to(torch.float16)
+        torch.save(knn_values, save_path + 'map_values.pt')
 
 def height_lookup(triangle_matrix: torch.Tensor, depth_points: torch.Tensor, horizontal_scale, shift):
     # Heightmap 1200x1200x100
@@ -220,7 +226,7 @@ def load_terrain(file_name):
     faces =  m.face_matrix().astype('uint32')
     return vertices, faces
 if __name__ == "__main__":
-    get_knn_triangles()
+    generate_knn_triangles()
 # heightmap = torch.load("heightmap_tensor.pt")
 # # for i in range(1200):
 # #     print(heightmap[i][180])
