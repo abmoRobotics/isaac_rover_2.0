@@ -41,7 +41,7 @@ class Rock_Detection():
         self.device = device    
         self.partition = True    
         self.num_partitions = 1 # Slices the input data to reduce VRAM usage. 
-        self.horizontal = 0.05  # Resolution of the triangle map
+        self.horizontal = 0.1  # Resolution of the triangle map
         self.rock_indices, self.triangles, self.vertices = self._load_triangles_with_indices()   # Load into [1200,1200, 100, 3] array
         self.shift = shift          # Shift of the map 
         self.dtype = torch.float16  # data type for performing the calculations
@@ -107,8 +107,8 @@ class Rock_Detection():
                 pt = pt.reshape(dim0,dim1,t_dim2,3)
                 # Find the maximum value of the 100 triangles to extract the "heightmap" value.
                 
-                indices =torch.max(distances,2).indices
-                distances = torch.max(distances,2).values
+                indices =torch.min(distances,2).indices
+                distances = torch.min(distances,2).values
                 indices = indices.unsqueeze(dim=2).unsqueeze(dim=2).repeat(1,1,1,3)
                 pt = pt.gather(dim=2,index=indices)
                 pt = pt.squeeze(dim=2)

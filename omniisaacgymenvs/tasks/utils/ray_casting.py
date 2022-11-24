@@ -25,7 +25,7 @@ def ray_distance(sources: torch.Tensor, directions: torch.Tensor, triangles: tor
     epsilon = 0.1
     zeros = torch.zeros(sources.shape[0],device=device,dtype=dtype) - epsilon
     ones = torch.ones(sources.shape[0],device=device,dtype=dtype) + epsilon
-    error_tensor = ones * -99.0
+    error_tensor = ones * 10.0
 
     # Normalize and opposite of direction
     d = -torch.nn.functional.normalize(directions) # 4000 x 3 
