@@ -21,3 +21,4 @@ omniisaacgymenvs/tasks/utils/ray_castingbackup.py
 *.fbx
 *.ply
 *.npy
+omniisaacgymenvs/tasks/utils/backup/terrain/mesh_generator.py

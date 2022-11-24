@@ -185,13 +185,13 @@ def Ackermann2(lin_vel, ang_vel, device='cuda:0'):
     # Convert linear velocity above ground to rad/s
     motor_velocities = (motor_velocities/wheel_diameter)*scale
     
-    steering_angles = torch.transpose(torch.where(wheel_locations[:,:,0] > P[:,:,0], torch.atan2(wheel_locations[:,:,1], wheel_locations[:,:,0] - P[:,:,0]), torch.atan2(-wheel_locations[:,:,1], -wheel_locations[:,:,0] - P[:,:,0])), 0, 1)
+    steering_angles = torch.transpose(torch.where(torch.abs(wheel_locations[:,:,0]) > torch.abs(P[:,:,0]), torch.atan2(wheel_locations[:,:,1], wheel_locations[:,:,0] - P[:,:,0]), torch.atan2(wheel_locations[:,:,1], wheel_locations[:,:,0] - P[:,:,0])), 0, 1)
     steering_angles = torch.where(steering_angles < -3.14/2, steering_angles + math.pi, steering_angles)
     steering_angles = torch.where(steering_angles > 3.14/2, steering_angles - math.pi, steering_angles)
 
     return steering_angles, motor_velocities
 
 if __name__ == "__main__":
-    lin = torch.ones((1)) * 1.0
+    lin = torch.ones((1)) * 0.0
     ang = torch.ones((1)) * -2.0
     print(Ackermann2(lin,ang, 'cpu'))
