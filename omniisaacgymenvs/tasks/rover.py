@@ -424,6 +424,13 @@ class RoverTask(RLTask):
         # Distance to target
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
 
+        #draw = _debug_draw.acquire_debug_draw_interface()
+        #target_list = self.target_positions[:,0:3].tolist()
+        #rover_list = self.rover_positions[:,0:3].tolist()
+        #N = len(target_list)
+        #draw.clear_lines()
+        #draw.draw_lines(target_list, rover_list, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
+
         # Heading constraint - Avoid driving backwards
         lin_vel = self.linear_velocity.get_state(0)   # Get latest lin_vel
         heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]
