@@ -92,7 +92,7 @@ class RoverTask(RLTask):
         self.Camera = Camera(self._device,self.shift,debug=False)
         self.num_exteroceptive = self.Camera.get_num_exteroceptive()
         self.Rock_detector = Rock_Detection(self._device,self.shift,debug=False)
-
+        self.global_step = 0
         # Define action space and observation space
         self._num_proprioceptive = 4
         self._num_observations = self._num_proprioceptive + self.num_exteroceptive
@@ -240,9 +240,7 @@ class RoverTask(RLTask):
         direction_vector[:,0] = torch.cos(self.rover_rotation[..., 2]) # x value
         direction_vector[:,1] = torch.sin(self.rover_rotation[..., 2]) # y value
         target_vector = self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]
-        self.heading_diff = torch.atan2(target_vector[:,0] * direction_vector[:,1] - target_vector[:,1]*direction_vector[:,0],target_vector[:,0]*direction_vector[:,0]+target_vector[:,1]*direction_vector[:,1])
-        #self.heading_diff = torch.atan2(target_vector[:,1] * direction_vector[:,1] - target_vector[:,0]*direction_vector[:,0],target_vector[:,1]*direction_vector[:,0]+target_vector[:,0]*direction_vector[:,1])
-
+        self.heading_diff = -torch.atan2(target_vector[:,0] * direction_vector[:,1] - target_vector[:,1]*direction_vector[:,0],target_vector[:,0]*direction_vector[:,0]+target_vector[:,1]*direction_vector[:,1])
 
         # Get heightmap info
         heightmap, output_pt, sources = self.Camera.get_depths(self.rover_positions,self.rover_rotation)
@@ -288,6 +286,7 @@ class RoverTask(RLTask):
         return observations
 
     def pre_physics_step(self, actions) -> None:
+        self.global_step += 1
         self.rover_loc = self._rover.get_world_poses()[0]
         self.rover_rot = tensor_quat_to_eul(self._rover.get_world_poses()[1])
 
@@ -304,6 +303,7 @@ class RoverTask(RLTask):
         # Get action from model    
         _actions = actions.to(self._device)
         _actions = torch.clamp(_actions,-1.0,1.0)
+        print(_actions[1])
         if self.save_teacher_data:
             self.data_curr_timestep[:,1] = _actions[:,0]
             self.data_curr_timestep[:,2] = _actions[:,1]
@@ -318,7 +318,7 @@ class RoverTask(RLTask):
         self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
         self.actions_nn = self.actions_nn
         steering_angles, motor_velocities = Ackermann2(_actions[:,0], _actions[:,1])
-        #steering_angles, motor_velocities = Ackermann(torch.ones_like(_actions[:,0])*0.8*3, torch.ones_like(_actions[:,1])*3*3)
+        #steering_angles, motor_velocities = Ackermann(torch.ones_like(_actions[:,0])*0.8*3, -torch.ones_like(_actions[:,1])*3*3)
         
         #steering_angles, motor_velocities = Ackermann2(_actions[:,0]*0.0, abs(_actions[:,1]), self.device)
         # Create a n x 4 matrix for positions, where n is the number of environments/robots
@@ -425,6 +425,9 @@ class RoverTask(RLTask):
         # Heading constraint - Avoid driving backwards
         lin_vel = self.linear_velocity.get_state(0)   # Get latest lin_vel
         heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]
+        
+        if self.global_step < 1500:
+            heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]*30
 
         # Boogie angles - Penalty for driving over uneven terrain
         boogie_penalty = ( torch.abs(boogie_angles[:,0]) + torch.abs(boogie_angles[:,1]) + torch.abs(boogie_angles[:,2]) ) * self.rew_scales["boogie_contraint_reward"]
