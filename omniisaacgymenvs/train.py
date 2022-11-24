@@ -86,8 +86,8 @@ class TrainerSKRL():
     def __init__(self):
         self._load_cfg()
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.wandb_group =f"test-group_{time_str}"
-        self.wandb_name = f"test-run_{time_str}"
+        self.wandb_group =f"Test-Anton_{time_str}"
+        self.wandb_name = f"{time_str}"
        # self.start_simulation()
         #self.start_training()
 
@@ -127,12 +127,14 @@ class TrainerSKRL():
         # Instantiate the agent's models (function approximators).
         models_ppo = {  "policy": StochasticActorHeightmap(env.observation_space, env.action_space, network_features=mlp_layers, encoder_features=encoder_layers, activation_function=activation_function),
                     "value": DeterministicHeightmap(env.observation_space, env.action_space, network_features=mlp_layers, encoder_features=encoder_layers ,activation_function=activation_function)}
-
+    
+        # print()
+ 
         # Instantiate parameters of the model
         for model in models_ppo.values():
             model.init_parameters(method_name="normal_", mean=0.0, std=0.05)
         
-        self.cfg_ppo["experiment"]["write_interval"] = 50
+        self.cfg_ppo["experiment"]["write_interval"] = 100
         # Define agent
         agent = PPO(models=models_ppo,
                 memory=memory,
@@ -141,7 +143,7 @@ class TrainerSKRL():
                 action_space=env.action_space,
                 device=device)
         
-
+        #agent.load("agent_164000.pt")
         # Configure and instantiate the RL trainer
         cfg_trainer = {"timesteps": 1000000, "headless": True}
         trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
@@ -172,7 +174,7 @@ class TrainerSKRL():
 
     def sweep(self):
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.wandb_name = f"test-run_{time_str}"
+        self.wandb_name = f"test-Anton_{time_str}"
         run = wandb.init(project='isaac-rover-2.0', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="aalborg-university")
         self.cfg_ppo["learning_rate"] = wandb.config.lr
         self.cfg_ppo["mini_batches"] = wandb.config.mini_batches

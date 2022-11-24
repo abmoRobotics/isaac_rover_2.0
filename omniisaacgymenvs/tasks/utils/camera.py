@@ -42,7 +42,7 @@ class Camera():
         self.debug = debug
         self.device = device    
         self.partition = True    
-        self.num_partitions = 10 # Slices the input data to reduce VRAM usage. 
+        self.num_partitions = 4 # Slices the input data to reduce VRAM usage. 
         self.horizontal = 0.1  # Resolution of the triangle map
         #self.map_values = self._load_triangles()    # Load triangles into an [1200,1200, 100, 3, 3] array
         self.map_indices, self.triangles, self.vertices = self._load_triangles_with_indices()   # Load into [1200,1200, 100, 3] array
@@ -118,8 +118,8 @@ class Camera():
                 pt = pt.reshape(dim0,dim1,t_dim2,3)
                 # Find the maximum value of the 100 triangles to extract the "heightmap" value.
                 
-                indices =torch.max(distances,2).indices
-                distances = torch.max(distances,2).values
+                indices =torch.min(distances,2).indices
+                distances = torch.min(distances,2).values
                 indices = indices.unsqueeze(dim=2).unsqueeze(dim=2).repeat(1,1,1,3)
                 pt = pt.gather(dim=2,index=indices)
                 pt = pt.squeeze(dim=2)

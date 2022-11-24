@@ -36,7 +36,7 @@ rewards:
   pos_reward: 1.0
   collision_reward: 0.3
   heading_contraint_reward: 0.1 #0.05
-  motion_contraint_reward: -0.005 #15 #0.01 #0.005
+  motion_contraint_reward: -0.01 #15 #0.01 #0.005
   goal_angle_reward: 0.1
   boogie_contraint_reward: 0.5
   
