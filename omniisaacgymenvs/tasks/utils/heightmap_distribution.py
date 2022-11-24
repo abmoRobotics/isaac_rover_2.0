@@ -22,7 +22,7 @@ def heightmap_distribution(plot=False, device='cuda:0'):
 
     z_offset = -0.26878
 
-    see_beneath = True
+    see_beneath = False
 
     # The coarse map
     y = -10

@@ -15,21 +15,28 @@ def draw_depth(heightmap_points: torch.tensor, depth_points: torch.tensor,):
 
     rover_distributionZ = []
     rover_distribution2 = []
-    
+    depth_pointsZ = []
+    depth_points2 = []
     for i in range(N):
         rover_distributionZ.append(rover_distribution[i][2]+0.1)
 
     for i in range(N):
         rover_distribution2.append([rover_distribution[i][0], rover_distribution[i][1], rover_distributionZ[i]])
 
+    for i in range(N):
+        depth_pointsZ.append(depth_points[i][2]+0.1)
+    for i in range(N):
+        depth_points2.append([depth_points[i][0], depth_points[i][1], depth_pointsZ[i]])
+
     colors = [3 for _ in range(N)]
     sizes = [[3] for _ in range(N)]
     draw.clear_lines()
     #print(rover_distribution)
     #print(depth_points)
-    draw.draw_lines(rover_distribution, depth_points, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
+    #draw.draw_lines(rover_distribution, depth_points, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
+    draw.draw_lines(depth_points, depth_points2, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
     # if depth_points:
-    #     draw.draw_lines(rover_distribution, rover_distribution2, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
+        #draw.draw_lines(rover_distribution, rover_distribution2, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
     # else:
     #     draw.draw_lines(rover_distribution, depth_points, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
 

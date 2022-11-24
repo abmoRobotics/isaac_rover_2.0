@@ -28,7 +28,7 @@ class Layer(nn.Module):
 
 
 class StochasticActorHeightmap(GaussianMixin, Model):
-    def __init__(self, observation_space, action_space, num_exteroception=2, device = "cuda:0", network_features=[512,256,128], encoder_features=[80,60], activation_function="relu",clip_actions=False, clip_log_std = True, min_log_std= -20.0, max_log_std = 2.0, reduction="sum"):
+    def __init__(self, observation_space, action_space, num_exteroception=2, device = "cuda:0", network_features=[512,256,128], encoder_features=[80,60], activation_function="relu",clip_actions=False, clip_log_std = True, min_log_std= -20.0, max_log_std = 1.0, reduction="sum"):
         #super().__init__(observation_space, action_space, device, clip_actions)
         Model.__init__(self, observation_space, action_space, device)
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
