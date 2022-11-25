@@ -88,8 +88,6 @@ def heightmap_distribution(plot=False):
 
     point_distribution = np.round(point_distribution, 4)
 
-    print(beneath_idx)
-
     if plot == True:
         fig, ax = plt.subplots()
         ax.scatter(point_distribution[:,0], point_distribution[:,1])
