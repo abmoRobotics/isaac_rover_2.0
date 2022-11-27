@@ -117,7 +117,7 @@ class TrainerSKRL():
 
         
         # Instantiate a RandomMemory as rollout buffer (any memory can be used for this)
-        memory = RandomMemory(memory_size=30, num_envs=self.env.num_envs, device=device)
+        memory = RandomMemory(memory_size=60, num_envs=self.env.num_envs, device=device)
 
         # Get values from cfg
         mlp_layers = self.cfg_network.mlp.layers
@@ -143,7 +143,7 @@ class TrainerSKRL():
                 action_space=env.action_space,
                 device=device)
         
-        #agent.load("agent_164000.pt")
+        #agent.load("agent_88000.pt")
         # Configure and instantiate the RL trainer
         cfg_trainer = {"timesteps": 1000000, "headless": True}
         trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)

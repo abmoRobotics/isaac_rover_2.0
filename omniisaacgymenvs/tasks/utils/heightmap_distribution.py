@@ -23,8 +23,9 @@ def heightmap_distribution(plot=False, device='cuda:0'):
     z_offset = -0.26878
 
     see_beneath = False
-
-    # The coarse map
+    HD_enabled = False
+    
+    #The coarse map
     y = -10
     while y < 10:
     
@@ -37,19 +38,20 @@ def heightmap_distribution(plot=False, device='cuda:0'):
 
         y += delta_coarse
 
-    # The fine map
-    y = -10
-    while y < 10:
-    
-        x = -10
+    #The fine map
+    if HD_enabled:
+        y = -10
+        while y < 10:
         
-        while x < 10:
-            x += delta_fine
-            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 1.2):
-                if [x,y] not in point_distribution:
-                    point_distribution.append([y, x, z_offset])
+            x = -10
+            
+            while x < 10:
+                x += delta_fine
+                if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 1.2):
+                    if [x,y] not in point_distribution:
+                        point_distribution.append([y, x, z_offset])
 
-        y += delta_fine
+            y += delta_fine
 
     if see_beneath:
 

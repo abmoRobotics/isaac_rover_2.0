@@ -5,13 +5,13 @@ network:
     activation: leakyrelu
 
   encoder:
-    layers: [80,60]
+    layers: [60,20]
     activation: leakyrelu
     
 config:
-  rollouts: 30
+  rollouts: 60
   learning_epochs: 4
-  mini_batches: 30
+  mini_batches: 60
   discount_factor: 0.99
   lambda: 0.95
 

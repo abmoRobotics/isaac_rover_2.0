@@ -22,3 +22,6 @@ omniisaacgymenvs/tasks/utils/ray_castingbackup.py
 *.ply
 *.npy
 omniisaacgymenvs/tasks/utils/backup/terrain/mesh_generator.py
+*.obj
+*.zip
+omniisaacgymenvs/test.py
