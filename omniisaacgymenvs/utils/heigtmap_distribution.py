@@ -12,13 +12,21 @@ def heightmap_distribution(plot=False):
 
     # Define the borders of the area using lines. Define where points should be with respect to line.
     border = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']] 
+    coarse_radius = 5.0
+
     HDborder = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']] 
+    fine_radius = 1.2
+
     BeneathBorder = [[[0.32,0],[0.320,1],'left'],[[-0.320,0],[-0.320,1],'right'],[[-0.320,-0.5],[0.320,-0.5],'over'],[[-0.320,0.6],[0.320,0.6],'under']] 
 
     delta_coarse = 0.2
     delta_fine = 0.05
 
     point_distribution = []
+
+    coarse_idx = []
+    fine_idx = []
+    beneath_idx = []
 
     see_beneath = True
 
@@ -30,10 +38,14 @@ def heightmap_distribution(plot=False):
         
         while x < 10:
             x += delta_coarse
-            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 5.0):
+            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], coarse_radius): # REMEMBER TO CHANGE BELOW
                 point_distribution.append([x, y])
 
         y += delta_coarse
+
+    for idx, point in enumerate(point_distribution):
+        if inside_borders(point, border) and inside_circle(point, [0,0], coarse_radius): # REMEMBER TO CHANGE ABOVE
+            coarse_idx.append(idx)
 
     # The fine map
     y = -10
@@ -43,12 +55,17 @@ def heightmap_distribution(plot=False):
         
         while x < 10:
             x += delta_fine
-            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 1.2):
+            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], fine_radius): # REMEMBER TO CHANGE BELOW
                 if [x,y] not in point_distribution:
                     point_distribution.append([x, y])
 
         y += delta_fine
 
+    for idx, point in enumerate(point_distribution):
+        if inside_borders(point, border) and inside_circle(point, [0,0], fine_radius): # REMEMBER TO CHANGE ABOVE
+            fine_idx.append(idx)
+
+    # Points underneath belly pan
     if see_beneath:
 
         y = -10
@@ -58,18 +75,18 @@ def heightmap_distribution(plot=False):
             
             while x < 10:
                 x += delta_fine
-                if inside_borders([x, y], BeneathBorder) and inside_circle([x, y], [0,0], 1.2):
+                if inside_borders([x, y], BeneathBorder) and inside_circle([x, y], [0,0], fine_radius): # REMEMBER TO CHANGE BELOW
                     if [x,y] not in point_distribution:
                         point_distribution.append([x, y])
 
             y += delta_fine        
 
+        for idx, point in enumerate(point_distribution):
+            if inside_borders(point, BeneathBorder) and inside_circle(point, [0,0], fine_radius): # REMEMBER TO CHANGE ABOVE
+                beneath_idx.append(idx)
 
 
     point_distribution = np.round(point_distribution, 4)
-
-
-    print(len(point_distribution))
 
     if plot == True:
         fig, ax = plt.subplots()
@@ -131,3 +148,7 @@ def inside_circle(point, centre, radius):
         return True
     else:
         return False
+
+if __name__ == '__main__':
+    heightmap_distribution()
+    exit()
