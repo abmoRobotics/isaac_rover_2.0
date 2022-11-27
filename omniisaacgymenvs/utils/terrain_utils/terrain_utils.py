@@ -403,6 +403,8 @@ def add_stones_to_stage(stage, vertices, triangles, position=None, orientation=N
                         position=position,
                         orientation=orientation)
 
+def remove_prim(stage, prim):
+    stage.RemovePrim(prim)
     #UsdPhysics.CollisionAPI.Apply(stones.prim)
     # collision_api = UsdPhysics.MeshCollisionAPI.Apply(terrain.prim)
     # collision_api.CreateApproximationAttr().Set("meshSimplification")

@@ -97,7 +97,7 @@ class RoverTask(RLTask):
         self._num_proprioceptive = 4
         self._num_observations = self._num_proprioceptive + self.num_exteroceptive
         self._num_actions = 2
-
+        self.curriculum_level = 1
         #self._device = 'cpu'
         self._sim_config = sim_config
 
@@ -106,7 +106,7 @@ class RoverTask(RLTask):
         
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
-        self._rover_positions = torch.tensor([30.0, 30.0, 0.0])
+        self._rover_positions = torch.tensor([28.0, 30.0, 0.0])
         self.heightmap = None
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
@@ -146,12 +146,13 @@ class RoverTask(RLTask):
         return
 
     def _create_trimesh(self):
-        vertices, triangles = load_terrain('map.ply')
-        v2, t2 = load_terrain('big_stones.ply')
+        vertices, triangles = load_terrain('terrain100000.ply')
+
+        #self.v2, self.t2 = load_terrain('big_stones.ply')
         position = self.shift
 
         add_terrain_to_stage(stage=self._stage, vertices=vertices, triangles=triangles, position=position)  
-        add_stones_to_stage(stage=self._stage, vertices=v2, triangles=t2, position=position)      
+        #add_stones_to_stage(stage=self._stage, vertices=v2, triangles=t2, position=position)      
     # Sets up the scene for the rover to navigate in
     def set_up_scene(self, scene) -> None:
         self._stage = get_current_stage()
@@ -247,14 +248,15 @@ class RoverTask(RLTask):
 
         # Check which rovers should reset due to rock collision
         rock_dist, rock_pt, rock_sources = self.Rock_detector.get_depths(self.rover_positions,self.rover_rotation, self._rover.get_joint_positions())
-        self.check_collision(rock_dist)
+        if self.curriculum_level >= 2: 
+            self.check_collision(rock_dist)
     
         # This function is used for calculating the observations/input to the rover.
-        self.obs_buf[:, 0] = torch.linalg.norm(target_vector,dim=1) / 4
+        self.obs_buf[:, 0] = torch.linalg.norm(target_vector,dim=1) / 9.5
         self.obs_buf[:, 1] = (self.heading_diff) / math.pi
         self.obs_buf[:, 2] = self.linear_velocity.get_state(timestep=0) / 3
         self.obs_buf[:, 3] = self.angular_velocity.get_state(timestep=0) / 3
-        self.obs_buf[:, self._num_proprioceptive:self._num_observations ] = heightmap * 2
+        self.obs_buf[:, self._num_proprioceptive:self._num_observations ] = heightmap / 2 #* 2
         
         # add curr timestep to big tensor
         if self.save_teacher_data:
@@ -289,7 +291,17 @@ class RoverTask(RLTask):
         self.global_step += 1
         self.rover_loc = self._rover.get_world_poses()[0]
         self.rover_rot = tensor_quat_to_eul(self._rover.get_world_poses()[1])
+        if self.global_step == 14000:
 
+            remove_prim(stage=self._stage, prim="/World/terrain/Mesh")
+            vertices, triangles = load_terrain('map.ply')
+            vertices_rocks, triangles_rocks = load_terrain('big_stones.ply')
+            
+            
+            position = self.shift
+            add_terrain_to_stage(stage=self._stage, vertices=vertices, triangles=triangles, position=position)
+            add_stones_to_stage(stage=self._stage, vertices=vertices_rocks, triangles=triangles_rocks, position=self.shift) 
+            self.curriculum_level = 2 
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
@@ -302,6 +314,8 @@ class RoverTask(RLTask):
             self.data_curr_timestep[:,0] = self.reset_info[:]
         # Get action from model    
         _actions = actions.to(self._device)
+        self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
+        self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
         _actions = torch.clamp(_actions,-1.0,1.0)
         print(_actions[1])
         if self.save_teacher_data:
@@ -309,8 +323,7 @@ class RoverTask(RLTask):
             self.data_curr_timestep[:,2] = _actions[:,1]
         #print(_actions)
         # Track states
-        self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
-        self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
+
 
         # Code for running in Ackermann mode
         _actions[:,0] = _actions[:,0] * 9 #1.17 # max speed
@@ -426,8 +439,8 @@ class RoverTask(RLTask):
         lin_vel = self.linear_velocity.get_state(0)   # Get latest lin_vel
         heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]
         
-        if self.global_step < 1500:
-            heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]*30
+        if False: #self.global_step < 1000:
+            heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]*10
 
         # Boogie angles - Penalty for driving over uneven terrain
         boogie_penalty = ( torch.abs(boogie_angles[:,0]) + torch.abs(boogie_angles[:,1]) + torch.abs(boogie_angles[:,2]) ) * self.rew_scales["boogie_contraint_reward"]
@@ -443,15 +456,23 @@ class RoverTask(RLTask):
         motion_contraint_penalty = motion_contraint_penalty+(torch.pow(penalty2,2)) * self.rew_scales["motion_contraint_reward"]
 
         # distance to target
-        pos_reward = (1.0 / (1.0 + 0.33*0.33*target_dist * target_dist)) * self.rew_scales['pos_reward']
-        pos_reward = torch.where(target_dist <= 0.05, 1.03*(self.max_episode_length-self.progress_buf), pos_reward.float())  # reward for getting close to target
+        pos_reward = (1.0 / (1.0 + (0.33*0.33*target_dist * target_dist))) * self.rew_scales['pos_reward']
+        pos_reward = torch.where(target_dist <= 0.18, 1.03*(self.max_episode_length-self.progress_buf), pos_reward.float())  # reward for getting close to target
         
-        # Collision penalty
-        collision_tracker = torch.where(self.rock_collison == 1, max_reward*self.num_envs,zero_reward)
-
+        #pos_reward = torch.where(target_dist >= 9.5, -0.3*(self.max_episode_length), pos_reward.double())
+        
+#torch.where(target_dist >= 9.5, ones, resets)
         # Calculate combined reward
         reward = pos_reward + heading_contraint_penalty + motion_contraint_penalty + goal_angle_penalty
-        #reward = torch.where(self.rock_collison == 1, reward-100, reward)
+        #reward = torch.where(target_dist >= 9.5, -0.3*(self.max_episode_length)*ones, reward)
+        if self.curriculum_level >= 2:
+
+            # Collision penalty
+            collision_tracker = torch.where(self.rock_collison == 1, max_reward*self.num_envs,zero_reward)
+
+            reward = torch.where(self.rock_collison == 1, reward-300, reward)
+        else:
+            collision_tracker = zero_reward
         reward = reward / 3000
         self.rew_buf[:] = reward
         self.extras["pos_reward"] = pos_reward
@@ -469,7 +490,7 @@ class RoverTask(RLTask):
         dist_rocks = torch.cdist(self.target_positions[env_ids][:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
         dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]  
         nearest_rock = torch.min(dist_rocks,dim=1)[0]
-        reset_buf = torch.where(nearest_rock <= 1.0, ones, zeros)
+        reset_buf = torch.where(nearest_rock <= 0.8, ones, zeros)
         env_ids = reset_buf * env_ids   # Multiply reset buffer with env_ids in order to get reset ids
         reset_buf_len = len(reset_buf.nonzero(as_tuple=False).squeeze(-1))  # Get number of non-zero values in the reset buffer
         return env_ids, reset_buf_len
@@ -498,7 +519,18 @@ class RoverTask(RLTask):
 
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
-        self.generate_goals(env_ids, radius=9) # Generate goals
+        # if self.global_step < 5000:
+        #     radius = 2
+        # elif self.global_step < 8000:
+        #     radius = 3
+        # elif self.global_step < 12000:
+        #     radius = 4.5
+        # if self.global_step < 16000:
+        #     radius = 6
+        # else:
+        #     radius = 9
+        radius = 8
+        self.generate_goals(env_ids, radius=radius) # Generate goals
         envs_long = env_ids.long()
         global_pos = self.target_positions[env_ids, 0:2]#.add(self.env_origins_tensor[env_ids, 0:2])
         height= self.get_pos_height(self.heightmap, global_pos[:,0:2], self.horizontal_scale, self.vertical_scale, self.shift[0:2])
@@ -540,9 +572,12 @@ class RoverTask(RLTask):
         resets = torch.where(torch.abs(self.rover_rot[:,0]) >= 0.78*1.5, ones, resets)
         resets = torch.where(torch.abs(self.rover_rot[:,1]) >= 0.78*1.5, ones, resets)
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
-        resets = torch.where(target_dist >= 11, ones, resets)
-        resets = torch.where(target_dist <= 0.05, ones,resets)
-        resets = torch.where(self.rock_collison == 1, torch.ones_like(self.reset_buf), resets)
+        resets = torch.where(target_dist >= 9.5, ones, resets)
+        resets = torch.where(target_dist <= 0.18, ones,resets)
+
+        # Check for collisions when curriculum level is 2 or higher
+        if self.curriculum_level >= 2:
+            resets = torch.where(self.rock_collison == 1, torch.ones_like(self.reset_buf), resets)
         self.reset_buf[:] = resets
 
     def avoid_pos_rock_collision(self, curr_pos):
