@@ -86,8 +86,8 @@ class TrainerSKRL():
     def __init__(self):
         self._load_cfg()
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.wandb_group =f"Test-Anton_{time_str}"
-        self.wandb_name = f"{time_str}"
+        self.wandb_group =f"Test-Emil_{time_str}"
+        self.wandb_name = f"run_{time_str}"
        # self.start_simulation()
         #self.start_training()
 

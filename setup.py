@@ -18,6 +18,7 @@ INSTALL_REQUIRES = [
     "pymeshlab",
     "open3d",
     "skrl @ git+https://github.com/abmoRobotics/skrl.git#egg=skrl",
+    "wandb",
 ]
 
 # Installation operation
