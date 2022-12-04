@@ -5,6 +5,7 @@ import open3d as o3d
 from omniisaacgymenvs.tasks.utils.heightmap_distribution import heightmap_distribution
 from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
 from omniisaacgymenvs.tasks.utils.ray_casting import ray_distance
+from omniisaacgymenvs.utils.heightmap_distribution import Heightmap
 import time
 
 class Camera():
@@ -41,13 +42,15 @@ class Camera():
         
         self.debug = debug
         self.device = device    
-        self.partition = True    
+        self.partition = True
+        self.heightmap = Heightmap(self.device)
         self.num_partitions = 4 # Slices the input data to reduce VRAM usage. 
         self.horizontal = 0.1  # Resolution of the triangle map
         #self.map_values = self._load_triangles()    # Load triangles into an [1200,1200, 100, 3, 3] array
         self.map_indices, self.triangles, self.vertices = self._load_triangles_with_indices()   # Load into [1200,1200, 100, 3] array
-        self.heightmap_distribution = heightmap_distribution()    # Get distribution of points in the local reference frame of the rover
+        self.heightmap_distribution = self.heightmap.get_distribution() # Get distribution of points in the local reference frame of the rover
         self.num_exteroceptive = self.heightmap_distribution.shape[0] 
+
         self.shift = shift          # Shift of the map 
         self.dtype = torch.float16  # data type for performing the calculations
 
@@ -144,7 +147,6 @@ class Camera():
         
         d1,d2,d3 = sources.shape[0],sources.shape[1] ,sources.shape[2] 
         #print((self.initialmemory3 - torch.cuda.memory_reserved(0))/1_000_000_000)
-        #self.debug = True
         
         if self.debug:
             try:

@@ -12,7 +12,7 @@ env:
 
   clipObservations: 5.0
   clipActions: 1.0
-  controlFrequencyInv: 5 # 60 Hz
+  controlFrequencyInv: 15 # 60 Hz
 
   terrain:
     staticFriction: 1.0  # [-]
@@ -41,7 +41,7 @@ rewards:
   boogie_contraint_reward: 0.5
   
 sim:
-  dt: 0.05 #0.0083 # 1/120 s
+  dt: 0.017 #0.0083 # 1/120 s
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   up_axis: "z"
   gravity: [0.0, 0.0, -9.81]
