@@ -41,7 +41,7 @@ import omni.kit
 
 class RLTask(BaseTask):
 
-    """ This class provides a PyTorch RL-specific interface for setting up RL tasks. 
+    """ This class provides a PyTorch RL-specific interface for setting up RL tasks.
         It includes utilities for setting up RL task related parameters,
         cloning environments, and data collection for RL algorithms.
     """
@@ -107,7 +107,7 @@ class RLTask(BaseTask):
         self.extras = {}
 
     def set_up_scene(self, scene) -> None:
-        """ Clones environments based on value provided in task config and applies collision filters to mask 
+        """ Clones environments based on value provided in task config and applies collision filters to mask
             collisions across environments.
 
         Args:
@@ -129,7 +129,7 @@ class RLTask(BaseTask):
         self.set_initial_camera_params(camera_position=[10, 10, 3], camera_target=[0, 0, 0])
         if self._sim_config.task_config["sim"].get("add_distant_light", True):
             create_distant_light()
-    
+
     def set_initial_camera_params(self, camera_position=[10, 10, 3], camera_target=[0, 0, 0]):
         if self._env._render:
             viewport = omni.kit.viewport_legacy.get_default_viewport_window()
@@ -198,6 +198,14 @@ class RLTask(BaseTask):
             num_agents(int): Dimension of states.
         """
         return self._num_agents
+
+    # @property
+    # def num_exteroceptive(self):
+    #     return self.num_exteroceptive
+
+    # @property
+    # def num_proprioceptive(self):
+    #     return self._num_proprioceptive
 
     def get_states(self):
         """ API for retrieving states buffer, used for asymmetric AC training.

@@ -15,7 +15,7 @@ def heightmap_distribution(plot=False, device='cuda:0'):
     HDborder = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']] 
     BeneathBorder = [[[0.32,0],[0.320,1],'left'],[[-0.320,0],[-0.320,1],'right'],[[-0.320,-0.5],[0.320,-0.5],'over'],[[-0.320,0.6],[0.320,0.6],'under']] 
 
-    delta_coarse = 0.2
+    delta_coarse = 0.10
     delta_fine = 0.05
 
     point_distribution = []
@@ -33,7 +33,7 @@ def heightmap_distribution(plot=False, device='cuda:0'):
         
         while x < 10:
             x += delta_coarse
-            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 5.0):
+            if inside_borders([x, y], border) and inside_circle([x, y], [0,0], 3.0):
                 point_distribution.append([y, x, z_offset])
 
         y += delta_coarse

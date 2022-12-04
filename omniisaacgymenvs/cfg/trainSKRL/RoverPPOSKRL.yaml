@@ -5,7 +5,7 @@ network:
     activation: leakyrelu
 
   encoder:
-    layers: [60,20]
+    layers: [80,60]
     activation: leakyrelu
     
 config:

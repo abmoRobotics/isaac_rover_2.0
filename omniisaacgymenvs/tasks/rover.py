@@ -29,7 +29,7 @@
 
 import math
 import random
-
+from torch.distributions import Normal
 import time
 import numpy as np
 import torch
@@ -104,12 +104,17 @@ class RoverTask(RLTask):
         self._cfg = sim_config.config
         self._task_cfg = sim_config.task_config
         
+        # self._task_cfg["sim"]["default_physics_material"]["static_friction"] = self._task_cfg["env"]["terrain"]["staticFriction"]
+        # self._task_cfg["sim"]["default_physics_material"]["dynamic_friction"] = self._task_cfg["env"]["terrain"]["dynamicFriction"]
+        # self._task_cfg["sim"]["default_physics_material"]["restitution"] = self._task_cfg["env"]["terrain"]["restitution"]
+
+
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._rover_positions = torch.tensor([28.0, 30.0, 0.0])
         self.heightmap = None
         self._reset_dist = self._task_cfg["env"]["resetDist"]
-        self._max_push_effort = self._task_cfg["env"]["maxEffort"]
+       # self._max_push_effort = self._task_cfg["env"]["maxEffort"]
         self.max_episode_length = 3000
         self.curriculum = self._task_cfg["env"]["terrain"]["curriculum"]
 
@@ -123,6 +128,7 @@ class RoverTask(RLTask):
         self.position_z_offset = None
         self.Camera= Camera(self._device,self.shift)
         self.stone_prim_path = "/World/stones"
+        self.save_teacher_data = self._task_cfg["collect_data"]
 
         # Setup state trackers
         self.linear_velocity = Memory(num_envs = self._num_envs, num_states = 1, horizon = 3,device=self._device)
@@ -131,12 +137,20 @@ class RoverTask(RLTask):
         # Load reward weights
         self.rew_scales = self._task_cfg["rewards"]
 
-        self.save_teacher_data = False
+
+        info = {
+                "reset": 0,
+                "actions": 2,
+                "proprioceptive": self._num_proprioceptive,
+                "exteroceptive": self._num_observations - self._num_proprioceptive}
+                
+        self.student = Student_Inference(self.num_envs, info)
+        
         if self.save_teacher_data:
             self.curr_timestep = 0
-            self.data_curr_timestep = torch.empty((self.num_envs, 1899))
+            self.data_curr_timestep = torch.empty((self.num_envs, self.num_actions + self._num_proprioceptive + self.num_exteroceptive + 1))
             # TODO: set number of timesteps to 300 when running on machine with sufficient VRAM
-            self.teacher_dataset = torch.empty((5*30, self.num_envs, 1899))
+            self.teacher_dataset = torch.empty((5*30, self.num_envs, self.num_actions + self._num_proprioceptive + self.num_exteroceptive + 1))
             self.dataset_nr = 0
             self.reset_info = torch.zeros((self.num_envs))
         
@@ -291,7 +305,7 @@ class RoverTask(RLTask):
         self.global_step += 1
         self.rover_loc = self._rover.get_world_poses()[0]
         self.rover_rot = tensor_quat_to_eul(self._rover.get_world_poses()[1])
-        if self.global_step == 14000:
+        if self.global_step == 10:
 
             remove_prim(stage=self._stage, prim="/World/terrain/Mesh")
             vertices, triangles = load_terrain('map.ply')
@@ -299,8 +313,8 @@ class RoverTask(RLTask):
             
             
             position = self.shift
+            add_stones_to_stage(stage=self._stage, vertices=vertices_rocks, triangles=triangles_rocks, position=self.shift)
             add_terrain_to_stage(stage=self._stage, vertices=vertices, triangles=triangles, position=position)
-            add_stones_to_stage(stage=self._stage, vertices=vertices_rocks, triangles=triangles_rocks, position=self.shift) 
             self.curriculum_level = 2 
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
@@ -317,6 +331,10 @@ class RoverTask(RLTask):
         self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
         self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
         _actions = torch.clamp(_actions,-1.0,1.0)
+
+        a = self.student.act(self.obs_buf)
+        #print(a.shape)
+
         print(_actions[1])
         if self.save_teacher_data:
             self.data_curr_timestep[:,1] = _actions[:,0]
@@ -324,10 +342,15 @@ class RoverTask(RLTask):
         #print(_actions)
         # Track states
 
-
+        a = a.squeeze()
+        print(a[1])
+        _actions[0:4] = torch.clamp(a[0:4],-1.0,1.0)
         # Code for running in Ackermann mode
         _actions[:,0] = _actions[:,0] * 9 #1.17 # max speed
         _actions[:,1] = _actions[:,1] * 9 # 1.17#(1.17/0.58) # max speed / distance to wheel furthest away in meters
+        
+
+        
         self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
         self.actions_nn = self.actions_nn
         steering_angles, motor_velocities = Ackermann2(_actions[:,0], _actions[:,1])
@@ -342,10 +365,10 @@ class RoverTask(RLTask):
         positions[:, 0] = steering_angles[:,1] # Position of the front right(FR) motor.
         positions[:, 1] = steering_angles[:,5] # Position of the rear right(RR) motor.
         positions[:, 2] = steering_angles[:,0] # Position of the front left(FL) motor.
-        positions[:, 3] = -steering_angles[:,4] # Position of the rear left(RL) motor.
-        velocities[:, 0] = -motor_velocities[:,1] # Velocity FR
-        velocities[:, 1] = -motor_velocities[:,3] # Velocity CR
-        velocities[:, 2] = -motor_velocities[:,5] # Velocity RR
+        positions[:, 3] = steering_angles[:,4] # Position of the rear left(RL) motor.
+        velocities[:, 0] = motor_velocities[:,1] # Velocity FR
+        velocities[:, 1] = motor_velocities[:,3] # Velocity CR
+        velocities[:, 2] = motor_velocities[:,5] # Velocity RR
         velocities[:, 3] = motor_velocities[:,0] # Velocity FL
         velocities[:, 4] = motor_velocities[:,2] # Velocity CL
         velocities[:, 5] = motor_velocities[:,4] # Velocity RL
@@ -355,9 +378,9 @@ class RoverTask(RLTask):
         # positions[:, 1] = 0 # Position of the rear right(RR) motor.
         # positions[:, 2] = 0 # Position of the front left(FL) motor.
         # positions[:, 3] = 0 # Position of the rear left(FL) motor.
-        # velocities[:, 0] = -6.28/0.5 # Velocity FR
-        # velocities[:, 1] = -6.28/0.5 # Velocity CR
-        # velocities[:, 2] = -6.28/0.5 # Velocity RR
+        # velocities[:, 0] = 6.28/0.5 # Velocity FR
+        # velocities[:, 1] = 6.28/0.5 # Velocity CR
+        # velocities[:, 2] = 6.28/0.5 # Velocity RR
         # velocities[:, 3] = 6.28/0.5 # Velocity FL
         # velocities[:, 4] = 6.28/0.5 # Velocity CL
         # velocities[:, 5] = 6.28/0.5 # Velocity RL
@@ -447,7 +470,7 @@ class RoverTask(RLTask):
         heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]
         
         if False: #self.global_step < 1000:
-            heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]*10
+            heading_contraint_penalty = torch.where(lin_vel < 0, -max_reward, zero_reward) * self.rew_scales["heading_contraint_reward"]*30
 
         # Boogie angles - Penalty for driving over uneven terrain
         boogie_penalty = ( torch.abs(boogie_angles[:,0]) + torch.abs(boogie_angles[:,1]) + torch.abs(boogie_angles[:,2]) ) * self.rew_scales["boogie_contraint_reward"]
@@ -497,7 +520,7 @@ class RoverTask(RLTask):
         dist_rocks = torch.cdist(self.target_positions[env_ids][:,0:2], self.stone_info[:,0:2], p=2.0)  # Calculate distance to center of all rocks
         dist_rocks[:] = dist_rocks[:] - self.stone_info[:,6]  
         nearest_rock = torch.min(dist_rocks,dim=1)[0]
-        reset_buf = torch.where(nearest_rock <= 0.8, ones, zeros)
+        reset_buf = torch.where(nearest_rock <= 1.0, ones, zeros)
         env_ids = reset_buf * env_ids   # Multiply reset buffer with env_ids in order to get reset ids
         reset_buf_len = len(reset_buf.nonzero(as_tuple=False).squeeze(-1))  # Get number of non-zero values in the reset buffer
         return env_ids, reset_buf_len
@@ -599,7 +622,7 @@ class RoverTask(RLTask):
             #print("Dist nearest rocks: " + str(dist_rocks))                          # Calculate distance to nearest point of all rocks
             nearest_rock = torch.min(dist_rocks,dim=1)[0]                             # Find the closest rock to each robot
             #print("Dist nearest rock: " + str(nearest_rock)) 
-            curr_pos[:,0] = torch.where(nearest_rock[:] <= 1.2,torch.add(curr_pos[:,0], 0.05),curr_pos[:,0])
+            curr_pos[:,0] = torch.where(nearest_rock[:] <= 1.4,torch.add(curr_pos[:,0], 0.05),curr_pos[:,0])
         return curr_pos
     
 
@@ -608,4 +631,309 @@ class RoverTask(RLTask):
     def check_collision(self, rock_rays):
         #rock_rays = torch.where(rock_rays < -10, torch.ones_like(rock_rays)*99, rock_rays )
         nearest_rock = torch.min(rock_rays,dim=1)[0]            # Find the closest rock to each robot
-        self.rock_collison = torch.where(torch.abs(nearest_rock) < 0.8, torch.ones_like(self.reset_buf), torch.zeros_like(self.reset_buf))
+        self.rock_collison = torch.where(torch.abs(nearest_rock) < 0.3, torch.ones_like(self.reset_buf), torch.zeros_like(self.reset_buf))
+
+
+
+
+
+class Student_Inference():
+    def __init__(self, num_envs, info, device='cuda:0') -> None:
+        self.cfg = self.cfg_fn()
+        self.info = info
+        self.model = self.load_model('best.pt')
+        self.h = self.model.belief_encoder.init_hidden(num_envs).to(device)
+        
+
+    def load_model(self, model_name):
+        model = Student(self.info, self.cfg)
+        checkpoint = torch.load(model_name)
+        model.load_state_dict(checkpoint['state_dict'])
+        model.eval()
+        model.cuda()
+
+        return model
+
+    def act(self,observations):
+        with torch.no_grad():
+            #print(observations.shape)
+            actions, predictions, self.h = self.model(observations.unsqueeze(1),self.h)
+            return actions
+
+    def info_fn(self):
+        pass
+
+    def cfg_fn(self):
+        cfg = {
+            "info":{
+                "reset":            0,
+                "actions":          0,
+                "proprioceptive":   0,
+                "exteroceptive":    0,
+            },
+            "learning":{
+                "learning_rate": 1e-4,
+                "epochs": 500,
+                "batch_size": 8,
+            },
+            "encoder":{
+                "activation_function": "leakyrelu",
+                "encoder_features": [80,60]},
+
+            "belief_encoder": {
+                "hidden_dim":       50,
+                "n_layers":         2,
+                "activation_function":  "leakyrelu",
+                "gb_features": [64,64,60],
+                "ga_features": [64,64,60]},
+
+            "belief_decoder": {
+                "activation_function": "leakyrelu",
+                "gate_features":    [128,256,512],
+                "decoder_features": [128,256,512]
+            },
+            "mlp":{"activation_function": "leakyrelu",
+                "network_features": [256,160,128]},
+                }
+
+        return cfg
+
+
+
+import torch.nn as nn
+
+class Layer(nn.Module):
+    def __init__(self,in_channels,out_channels, activation_function="elu"):
+        super(Layer,self).__init__()
+        self.activation_functions = {
+            "elu" : nn.ELU(),
+            "relu" : nn.ReLU(inplace=True),
+            "leakyrelu" :nn.LeakyReLU(),
+            "sigmoid" : nn.Sigmoid(),
+            "tanh" : nn.Tanh(),
+            "relu6" : nn.ReLU6()
+           } 
+        self.layer = nn.Sequential(
+            nn.Linear(in_channels,out_channels),
+            self.activation_functions[activation_function]
+        )
+    def forward(self,x):
+        return self.layer(x)
+
+class Encoder(nn.Module):
+    def __init__(
+            self, info, cfg):
+        super(Encoder,self).__init__()
+        encoder_features = cfg["encoder_features"]
+        activation_function = cfg["activation_function"]
+        
+        self.encoder = nn.ModuleList() 
+        in_channels = info["exteroceptive"]
+        for feature in encoder_features:
+            self.encoder.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+
+    def forward(self, x):
+        
+        for layer in self.encoder:
+            x = layer(x)
+        
+        return x
+
+class Belief_Encoder(nn.Module):
+    def __init__(
+            self, info, cfg, input_dim=60):
+        super(Belief_Encoder,self).__init__()
+        self.hidden_dim = cfg["hidden_dim"]
+        self.n_layers = cfg["n_layers"]
+        activation_function = cfg["activation_function"]
+        proprioceptive = info["proprioceptive"]
+        input_dim = proprioceptive+input_dim
+        
+
+        self.gru = nn.GRU(input_dim, self.hidden_dim, self.n_layers, batch_first=True)
+        self.gb = nn.ModuleList()
+        self.ga = nn.ModuleList()
+        gb_features = cfg["gb_features"]
+        ga_features = cfg["ga_features"]
+
+        in_channels = self.hidden_dim
+        for feature in gb_features:
+            self.gb.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+        
+        in_channels = self.hidden_dim
+        for feature in ga_features:
+            self.ga.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+
+        self.ga.append(nn.Sigmoid())
+
+    def forward(self, p, l_e, h):
+        #print(l_e.shape)
+        # p = proprioceptive
+        # e = exteroceptive
+        # h = hidden state
+        # x = input data, h = hidden state
+        
+        x = torch.cat((p,l_e),dim=2)
+        out, h = self.gru(x, h)
+        x_b = x_a = out
+
+        for layer in self.gb:
+            x_b = layer(x_b)
+        for layer in self.ga:
+            x_a = layer(x_a)
+
+        x_a = l_e * x_a
+        # TODO IMPLEMENT GATE
+        belief = x_b + x_a
+
+        return belief, h, out
+
+    def init_hidden(self, batch_size):
+        weight = next(self.parameters()).data
+        hidden = weight.new(self.n_layers, batch_size, self.hidden_dim).zero_().to('cpu')
+        return hidden
+
+class Belief_Decoder(nn.Module):
+    def __init__(
+            self, info, cfg, n_input=50, hidden_dim=50,n_layers=2,activation_function="leakyrelu"):
+        super(Belief_Decoder,self).__init__()
+        exteroceptive = info["exteroceptive"]
+        gate_features = cfg["gate_features"] #[128,256,512, exteroceptive]
+        decoder_features = cfg["decoder_features"]#[128,256,512, exteroceptive]
+        #n_input = cfg[""]
+        gate_features.append(exteroceptive)
+        decoder_features.append(exteroceptive)
+        self.n_input = n_input
+        self.gate_encoder = nn.ModuleList()
+        self.decoder = nn.ModuleList()
+    
+
+        in_channels = self.n_input
+        for feature in gate_features:
+            self.gate_encoder.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+        self.gate_encoder.append(nn.Sigmoid())  
+
+        in_channels = self.n_input
+        for feature in decoder_features:
+            self.decoder.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+        
+
+    def forward(self, e, h):
+        gate = h#h[-1]
+        decoded = h#h[-1]
+       # gate = gate.repeat(e.shape[1], 1, 1).permute(1,0,2)
+       # decoded = decoded.repeat(e.shape[1], 1, 1).permute(1,0,2)
+        #print(h.shape)
+        for layer in self.gate_encoder:
+            gate = layer(gate)
+
+        for layer in self.decoder:
+            decoded = layer(decoded)
+        x = e*gate
+        x = x + decoded
+        return x
+    
+    def init_weights(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform(m.weight)
+            m.bias.data.fill_(1.0)
+
+class MLP(nn.Module):
+    def __init__(
+            self, info, cfg, belief_dim):
+        super(MLP,self).__init__()
+        self.network = nn.ModuleList()  # MLP for network
+        proprioceptive = info["proprioceptive"]
+        action_space = info["actions"]
+        activation_function = cfg["activation_function"]
+        network_features = cfg["network_features"]
+
+        in_channels = proprioceptive + belief_dim
+        for feature in network_features:
+            self.network.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+
+        self.network.append(nn.Linear(in_channels,action_space))
+        self.network.append(nn.Tanh())
+        self.log_std_parameter = nn.Parameter(torch.zeros(action_space))
+
+    def forward(self, p, belief):
+        
+        x = torch.cat((p,belief),dim=2)
+
+        for layer in self.network:
+            x = layer(x)
+        return x, self.log_std_parameter
+
+class Student(nn.Module):
+    def __init__(
+            self, info, cfg):
+        super(Student,self).__init__()
+
+        self.n_re = info["reset"]
+        self.n_pr = info["proprioceptive"]
+        self.n_ex = info["exteroceptive"]
+        self.n_ac = info["actions"]
+        
+        self.encoder = Encoder(info, cfg["encoder"])
+        encoder_dim = cfg["encoder"]["encoder_features"][-1]
+        self.belief_encoder = Belief_Encoder(info, cfg["belief_encoder"], input_dim=encoder_dim)
+        self.belief_decoder = Belief_Decoder(info, cfg["belief_decoder"])
+        self.MLP = MLP(info, cfg["mlp"], belief_dim=60)
+
+    def forward(self, x, h):
+
+        n_ac = 0
+        n_pr = self.n_pr
+        n_re = self.n_re
+        n_ex = self.n_ex
+        print(n_ac)
+        print(n_pr)
+        print(n_re)
+        print(n_ex)
+        print("STOP")
+        reset = x[:,:, 0:n_re]
+        actions = x[:,:,n_re:n_re+n_ac]
+        proprioceptive = x[:,:,n_re+n_ac:n_re+n_ac+n_pr]
+        exteroceptive = x[:,:,-n_ex:]
+        
+        # n_p = self.n_p
+        
+        # p = x[:,:,0:n_p]        # Extract proprioceptive information  
+        
+        # e = x[:,:,n_p:1084]         # Extract exteroceptive information
+        
+        e_l = self.encoder(exteroceptive) # Pass exteroceptive information through encoder
+
+        belief, h, out = self.belief_encoder(proprioceptive,e_l,h) # extract belief state
+        
+        #estimated = self.belief_decoder(exteroceptive,h)
+        estimated = self.belief_decoder(exteroceptive,out)
+        
+
+        actions, log_std = self.MLP(proprioceptive,belief)
+
+        # min_log_std= -20.0
+        # max_log_std = 2.0
+        # log_std = torch.clamp(log_std, 
+        #                         min_log_std,
+        #                         max_log_std)
+        # g_log_std = log_std
+        # # print(actions.shape[0])
+        # # print(actions.shape[2])
+        # _g_num_samples = actions.shape[0]
+
+        # # # distribution
+        # _g_distribution = Normal(actions, log_std.exp())
+        # #print(_g_distribution.shape)
+        # # # sample using the reparameterization trick
+        # actions = _g_distribution.rsample()
+        #print((actions-action).mean())
+
+        return actions, estimated, h
+

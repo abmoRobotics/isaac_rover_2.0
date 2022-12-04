@@ -11,12 +11,14 @@ from skrl.trainers.torch import SequentialTrainer
 from skrl.envs.torch import wrap_env
 from skrl.envs.torch import load_omniverse_isaacgym_env
 from skrl.utils import set_seed
-from learning.model import StochasticActorHeightmap, DeterministicHeightmap
+from learning.model import StochasticActorHeightmap, DeterministicHeightmap, ObserverationInfo, NetworkInfo
 import hydra
 from omegaconf import DictConfig
 from hydra import compose, initialize
 import wandb
 import datetime
+from omniisaacgymenvs.tasks.utils.heightmap_distribution import heightmap_distribution
+
 #cfg_ppo = PPO_DEFAULT_CONFIG.copy()
 
 # set the seed for reproducibility
@@ -86,7 +88,8 @@ class TrainerSKRL():
     def __init__(self):
         self._load_cfg()
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.wandb_group =f"Test-Emil_{time_str}"
+        self.wandb_group =f"Improved_{time_str}"
+        #self.wandb_group ="remove"
         self.wandb_name = f"run_{time_str}"
        # self.start_simulation()
         #self.start_training()
@@ -100,6 +103,8 @@ class TrainerSKRL():
         self.cfg_ppo = PPO_DEFAULT_CONFIG.copy()
         self.cfg_network = cfg.trainSKRL.network
         self.cfg_experiment = cfg.trainSKRL.experiment
+        self.cfg_config = cfg.trainSKRL.config
+        self.sim_params = cfg.task  
         # Set all parameters according to cfg file
         for param, value in (cfg.trainSKRL.config).items():
             self.cfg_ppo[param] = value
@@ -111,10 +116,25 @@ class TrainerSKRL():
         env = load_omniverse_isaacgym_env(task_name="Rover")
         self.env = wrap_env(env)
 
-    def train(self):
+    def log_parameters(self):
+        config = {                    "mlp layers": self.cfg_network.mlp.layers,
+                    "mlp_activation": self.cfg_network.mlp.activation,
+                    "encoder_layers": self.cfg_network.encoder.layers,
+                    "encoder_activation": self.cfg_network.encoder.activation,
+                    "hyperparameters": self.cfg_config,
+                    "rewards": self.sim_params.rewards,
+                    "sim parameters": {"environment": self.sim_params.env,
+                                        "simulation": self.sim_params.sim,},
+                    }
+                
+        # for key,value in (self.cfg_config).items():
+        #     config[key] = value
+        return config
+    def train(self,sweep=False):
         env = self.env
         device = env.device
-
+        if not sweep:
+            self.log_parameters()
         
         # Instantiate a RandomMemory as rollout buffer (any memory can be used for this)
         memory = RandomMemory(memory_size=60, num_envs=self.env.num_envs, device=device)
@@ -123,16 +143,24 @@ class TrainerSKRL():
         mlp_layers = self.cfg_network.mlp.layers
         encoder_layers = self.cfg_network.encoder.layers
         activation_function = self.cfg_network.mlp.activation
+        #print(env.num_exteroceptive)
+        #TODO fix
+        heightmap_distribution1 = heightmap_distribution()
+        num_sparse = heightmap_distribution1.get_num_sparse_vector()
+        num_dense = heightmap_distribution1.get_num_dense_vector()
+        num_beneath = heightmap_distribution1.get_num_beneath_vector()
+        networkInfo = NetworkInfo([256,160,128],[80,60],[80,60],[80,60],"leakyrelu")
+        observerationInfo = ObserverationInfo(4,num_sparse,num_dense,num_beneath)
 
         # Instantiate the agent's models (function approximators).
-        models_ppo = {  "policy": StochasticActorHeightmap(env.observation_space, env.action_space, network_features=mlp_layers, encoder_features=encoder_layers, activation_function=activation_function),
-                    "value": DeterministicHeightmap(env.observation_space, env.action_space, network_features=mlp_layers, encoder_features=encoder_layers ,activation_function=activation_function)}
-    
+        models_ppo = {  "policy": StochasticActorHeightmap(env.observation_space, env.action_space, num_exteroceptive=num_exteroceptive, network_features=mlp_layers, encoder_features=encoder_layers, activation_function=activation_function),
+                    "value": DeterministicHeightmap(env.observation_space, env.action_space, num_exteroceptive=num_exteroceptive, network_features=mlp_layers, encoder_features=encoder_layers ,activation_function=activation_function)}
+
         # print()
  
         # Instantiate parameters of the model
-        for model in models_ppo.values():
-            model.init_parameters(method_name="normal_", mean=0.0, std=0.05)
+        # for model in models_ppo.values():
+        #     model.init_parameters(method_name="normal_", mean=0.0, std=0.05)
         
         self.cfg_ppo["experiment"]["write_interval"] = 100
         # Define agent
@@ -142,14 +170,14 @@ class TrainerSKRL():
                 observation_space=env.observation_space,
                 action_space=env.action_space,
                 device=device)
-        
-        #agent.load("agent_88000.pt")
+        #agent.migrate("best.pt")
+        agent.load("agent_240000.pt")
         # Configure and instantiate the RL trainer
         cfg_trainer = {"timesteps": 1000000, "headless": True}
         trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
         # start training
-        trainer.train()
+        trainer.eval()
 
     def start_training_sweep(self,n_sweeps):
         self.start_simulation()
@@ -183,9 +211,13 @@ class TrainerSKRL():
 
     def start_training(self):
         self.start_simulation()
-        wandb.init(project='isaac-rover-2.0', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="aalborg-university")
+        config = self.log_parameters()
+        log=False
+        if log:
+            wandb.init(project='isaac-rover-2.0', config=config, sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="aalborg-university")
         self.train()
-        wandb.finish()
+        if log:
+            wandb.finish()
 
 
     def start_training_sequential(self):
