@@ -252,7 +252,7 @@ class RoverTask(RLTask):
             self.check_collision(rock_wheel_dist, rock_body_dist)
     
         # This function is used for calculating the observations/input to the rover.
-        self.obs_buf[:, 0] = torch.linalg.norm(target_vector,dim=1) / 9.5
+        self.obs_buf[:, 0] = torch.linalg.norm(target_vector,dim=1) / 11
         self.obs_buf[:, 1] = (self.heading_diff) / math.pi
         self.obs_buf[:, 2] = self.linear_velocity.get_state(timestep=0) / 3
         self.obs_buf[:, 3] = self.angular_velocity.get_state(timestep=0) / 3
@@ -577,7 +577,7 @@ class RoverTask(RLTask):
         resets = torch.where(torch.abs(self.rover_rot[:,0]) >= 0.78*1.5, ones, resets)
         resets = torch.where(torch.abs(self.rover_rot[:,1]) >= 0.78*1.5, ones, resets)
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
-        resets = torch.where(target_dist >= 9.5, ones, resets)
+        resets = torch.where(target_dist >= 11, ones, resets)
         resets = torch.where(target_dist <= 0.18, ones,resets)
 
         # Check for collisions when curriculum level is 2 or higher
