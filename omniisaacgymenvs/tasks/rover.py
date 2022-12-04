@@ -245,11 +245,11 @@ class RoverTask(RLTask):
 
         # Get heightmap info
         heightmap, output_pt, sources = self.Camera.get_depths(self.rover_positions,self.rover_rotation)
-
+       
         # Check which rovers should reset due to rock collision
-        rock_dist, rock_pt, rock_sources = self.Rock_detector.get_depths(self.rover_positions,self.rover_rotation, self._rover.get_joint_positions())
+        rock_wheel_dist, rock_body_dist = self.Rock_detector.get_collisions(self.rover_positions,self.rover_rotation, self._rover.get_joint_positions())
         if self.curriculum_level >= 2: 
-            self.check_collision(rock_dist)
+            self.check_collision(rock_wheel_dist, rock_body_dist)
     
         # This function is used for calculating the observations/input to the rover.
         self.obs_buf[:, 0] = torch.linalg.norm(target_vector,dim=1) / 9.5
@@ -314,16 +314,14 @@ class RoverTask(RLTask):
             self.data_curr_timestep[:,0] = self.reset_info[:]
         # Get action from model    
         _actions = actions.to(self._device)
-        self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
-        self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
         _actions = torch.clamp(_actions,-1.0,1.0)
-        print(_actions[1])
         if self.save_teacher_data:
             self.data_curr_timestep[:,1] = _actions[:,0]
             self.data_curr_timestep[:,2] = _actions[:,1]
-        #print(_actions)
-        # Track states
 
+        # Track states
+        self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
+        self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
 
         # Code for running in Ackermann mode
         _actions[:,0] = _actions[:,0] * 9 #1.17 # max speed
@@ -602,10 +600,10 @@ class RoverTask(RLTask):
             curr_pos[:,0] = torch.where(nearest_rock[:] <= 1.2,torch.add(curr_pos[:,0], 0.05),curr_pos[:,0])
         return curr_pos
     
-
-
-
-    def check_collision(self, rock_rays):
+    def check_collision(self, wheel_dists, body_dists):
         #rock_rays = torch.where(rock_rays < -10, torch.ones_like(rock_rays)*99, rock_rays )
-        nearest_rock = torch.min(rock_rays,dim=1)[0]            # Find the closest rock to each robot
-        self.rock_collison = torch.where(torch.abs(nearest_rock) < 0.8, torch.ones_like(self.reset_buf), torch.zeros_like(self.reset_buf))
+        nearest_rock_wheel = torch.min(wheel_dists,dim=1)[0]            # Find the closest rock to each robot
+        nearest_rock_body = torch.min(body_dists,dim=1)[0]              # Find the closest rock to each robot
+        print(torch.min(wheel_dists,dim=1).shape)
+        self.rock_collison = torch.where(torch.abs(nearest_rock_wheel) < 0.8, torch.ones_like(self.reset_buf), torch.zeros_like(self.reset_buf))
+        self.rock_collison = torch.where(torch.abs(nearest_rock_body) < 0.45, torch.ones_like(self.reset_buf), self.rock_collison)
