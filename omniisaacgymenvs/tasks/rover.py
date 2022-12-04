@@ -113,6 +113,16 @@ class RoverTask(RLTask):
         self.max_episode_length = 3000
         self.curriculum = self._task_cfg["env"]["terrain"]["curriculum"]
 
+        self.is_evaluation = True
+        if self.is_evaluation:
+            # only one episode is taking into account, the result is stored for each rover individually:
+            # 0: start value
+            # 1: rover collided
+            # 2: rover reached goal
+            # 3: rover timed out
+            self.rover_eval_res = torch.zeros([self.num_envs], dtype=torch.long, device=self._device)  
+            print("Initial eval shape: " + str(self.rover_eval_res.shape))  
+
         self._ball_position = torch.tensor([0, 0, 1.0])
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
         self.shift = torch.tensor([0 , 0, 0.0],device=self._device)
@@ -579,6 +589,22 @@ class RoverTask(RLTask):
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
         resets = torch.where(target_dist >= 11, ones, resets)
         resets = torch.where(target_dist <= 0.18, ones,resets)
+        if self.is_evaluation:
+            # out of area handled like collision
+            out_of_area = torch.where(target_dist >= 9.5, 1, 0)
+            print("OoA shape: " + str(out_of_area.shape)) 
+            self.rover_eval_res = torch.where(self.rover_eval_res == 0, out_of_area, self.rover_eval_res)
+            # handle goal reached
+            reached_goal = torch.where(target_dist <= 0.18, 2, 0) 
+            print("Rg shape: " + str(reached_goal.shape)) 
+            self.rover_eval_res = torch.where(self.rover_eval_res == 0, reached_goal, self.rover_eval_res)
+            # handle timed out
+            timed_out = torch.where(self.progress_buf >= self.max_episode_length, 3, zeros)
+            print("To shape: " + str(timed_out.shape)) 
+            self.rover_eval_res = torch.where(self.rover_eval_res == 0, timed_out, self.rover_eval_res)
+            if self.global_step % self.max_episode_length == 0:
+                print("––––––––––––\nSaving evaluation tensor\n––––––––––––")
+                torch.save(self.rover_eval_res, "rover_eval.pt")
 
         # Check for collisions when curriculum level is 2 or higher
         if self.curriculum_level >= 2:
@@ -604,6 +630,9 @@ class RoverTask(RLTask):
         #rock_rays = torch.where(rock_rays < -10, torch.ones_like(rock_rays)*99, rock_rays )
         nearest_rock_wheel = torch.min(wheel_dists,dim=1)[0]            # Find the closest rock to each robot
         nearest_rock_body = torch.min(body_dists,dim=1)[0]              # Find the closest rock to each robot
-        print(torch.min(wheel_dists,dim=1).shape)
         self.rock_collison = torch.where(torch.abs(nearest_rock_wheel) < 0.8, torch.ones_like(self.reset_buf), torch.zeros_like(self.reset_buf))
         self.rock_collison = torch.where(torch.abs(nearest_rock_body) < 0.45, torch.ones_like(self.reset_buf), self.rock_collison)
+
+        if self.is_evaluation:
+            self.rover_eval_res = torch.where(self.rover_eval_res == 0, self.rock_collison, self.rover_eval_res)
+            print("Collision eval shape: " + str(self.rock_collison.shape))
