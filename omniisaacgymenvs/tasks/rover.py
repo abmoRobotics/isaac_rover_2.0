@@ -113,7 +113,9 @@ class RoverTask(RLTask):
         self.max_episode_length = 3000
         self.curriculum = self._task_cfg["env"]["terrain"]["curriculum"]
 
-        self.is_evaluation = True
+        self.is_evaluation = False
+        self.is_evaluation_with_noise = False
+        self.max_noise_dev = 0.2
         if self.is_evaluation:
             # only one episode is taking into account, the result is stored for each rover individually:
             # 0: start value
@@ -122,6 +124,11 @@ class RoverTask(RLTask):
             # 3: rover timed out
             self.rover_eval_res = torch.zeros([self.num_envs], dtype=torch.long, device=self._device)  
             print("Initial eval shape: " + str(self.rover_eval_res.shape))  
+            # set seeds for random number generators
+            seed = self._cfg["seed"]
+            torch.manual_seed(seed)
+            random.seed(seed)
+            np.random.seed(seed)
 
         self._ball_position = torch.tensor([0, 0, 1.0])
         self.target_positions = torch.zeros((self._num_envs, 3), device=self._device, dtype=torch.float32)
@@ -255,6 +262,16 @@ class RoverTask(RLTask):
 
         # Get heightmap info
         heightmap, output_pt, sources = self.Camera.get_depths(self.rover_positions,self.rover_rotation)
+
+        if self.is_evaluation:
+            if self.is_evaluation_with_noise:
+                # add noise with self.max_noise_dev to heightmap observation
+                # torch.rand adds uniform noise, if we want to have a different distribution for the noise we have to change this here
+                noise = torch.rand(heightmap.shape)
+                noise = torch.multiply(noise, self.max_noise_dev)
+                noise = torch.subtract(noise, self.max_noise_dev/2)
+                heightmap = torch.add(heightmap, noise)
+
        
         # Check which rovers should reset due to rock collision
         rock_wheel_dist, rock_body_dist = self.Rock_detector.get_collisions(self.rover_positions,self.rover_rotation, self._rover.get_joint_positions())
