@@ -14,6 +14,10 @@ This repository contains a reinforcement learning implementation in Isaac Sim 20
 https://user-images.githubusercontent.com/56405924/204378992-13709e09-ca9a-4aa7-b76d-eb012e801e02.mp4
 
 https://user-images.githubusercontent.com/56405924/204389953-d40bbcf7-2219-49d9-8480-07725625d674.mp4
+**Terrain**
+
+
+https://user-images.githubusercontent.com/56405924/212775394-6bf902e0-1161-42c6-aa53-8a0d6f10f324.mp4
 
 
 # Setup
