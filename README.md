@@ -21,6 +21,12 @@ https://user-images.githubusercontent.com/56405924/204389953-d40bbcf7-2219-49d9-
 https://user-images.githubusercontent.com/56405924/212775394-6bf902e0-1161-42c6-aa53-8a0d6f10f324.mp4
 
 
+
+https://user-images.githubusercontent.com/56405924/212775747-afaa91c2-4a10-458d-8b66-d3fbc30e07b0.mp4
+
+
+
+
 # Setup
 1. Install [Isaac Sim 2022.1.1](https://developer.nvidia.com/isaac-sim)
 2. Clone this repository 
