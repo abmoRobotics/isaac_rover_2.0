@@ -35,6 +35,7 @@ from omni.isaac.core.utils.nucleus import get_assets_root_path
 from omni.isaac.core.utils.stage import add_reference_to_stage
 from utils.terrain_utils.terrain_generation import *
 import carb
+import os
 
 #from omniisaacgymenvs.utils.terrain_utils.terrain_utils import *
 
@@ -50,22 +51,13 @@ class Rover(Robot):
 
         self._usd_path = usd_path
         self._name = name
-        #prim_path="/"
         if self._usd_path is None:
-            #assets_root_path = get_assets_root_path()
             assets_root_path = "http://localhost:8080/omniverse://127.0.0.1/"
-            #assets_root_path = "http://100.127.177.125:8080/omniverse://100.127.177.125"
-            # print(assets_root_path)
             if assets_root_path is None:
                 carb.log_error("Could not find Isaac Sim assets folder")
-            #self._usd_path ="/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Projects/usd/exomy/exomy_model/cartpole.usd" #"http://localhost:8080/omniverse://100.127.177.125/Projects/usd/exomy/exomy_model/Cartpole.usd"#"./cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"#/home/anton/OmniIsaacGymEnvs/omniisaacgymenvs/robots/articulations/cartpole.usd"#assets_root_path + "/Isaac/Robots/Cartpole/cartpole.usd"
-            #self._usd_path = assets_root_path + "/Projects/usd/exomy/exomy_model/exomy_model3.usd"
-            #self._usd_path = assets_root_path + "/Projects/exomy/exomy_model3.usd"
-            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/Mars_Rover_2_COPY6.usd"
-            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/RoverS/test.usd"
-            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/exomy_model.usd"
-            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/exomy/mars_rover_2_working.usd"
-            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified7.usd"
+            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified7.usd" # this was used for training
+            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified9.usd"
+            self._usd_path = os.getcwd() + "/robots/articulations/simplified9.usd"
             #self._usd_path = "robots/articulations/simplified3.usd"
 
         add_reference_to_stage(self._usd_path, prim_path)   

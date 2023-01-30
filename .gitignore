@@ -25,3 +25,4 @@ omniisaacgymenvs/tasks/utils/backup/terrain/mesh_generator.py
 *.obj
 *.zip
 omniisaacgymenvs/test.py
+omniisaacgymenvs/view_results.py

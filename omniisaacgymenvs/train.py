@@ -17,7 +17,7 @@ from omegaconf import DictConfig
 from hydra import compose, initialize
 import wandb
 import datetime
-from omniisaacgymenvs.tasks.utils.heightmap_distribution import heightmap_distribution
+from omniisaacgymenvs.utils.heightmap_distribution import Heightmap
 
 #cfg_ppo = PPO_DEFAULT_CONFIG.copy()
 
@@ -145,16 +145,16 @@ class TrainerSKRL():
         activation_function = self.cfg_network.mlp.activation
         #print(env.num_exteroceptive)
         #TODO fix
-        heightmap_distribution1 = heightmap_distribution()
-        num_sparse = heightmap_distribution1.get_num_sparse_vector()
-        num_dense = heightmap_distribution1.get_num_dense_vector()
-        num_beneath = heightmap_distribution1.get_num_beneath_vector()
+        heightmap_distribution = Heightmap()
+        num_sparse = heightmap_distribution.get_num_sparse_vector()
+        num_dense = heightmap_distribution.get_num_dense_vector()
+        num_beneath = heightmap_distribution.get_num_beneath_vector()
         networkInfo = NetworkInfo([256,160,128],[80,60],[80,60],[80,60],"leakyrelu")
         observerationInfo = ObserverationInfo(4,num_sparse,num_dense,num_beneath)
 
         # Instantiate the agent's models (function approximators).
-        models_ppo = {  "policy": StochasticActorHeightmap(env.observation_space, env.action_space, num_exteroceptive=num_exteroceptive, network_features=mlp_layers, encoder_features=encoder_layers, activation_function=activation_function),
-                    "value": DeterministicHeightmap(env.observation_space, env.action_space, num_exteroceptive=num_exteroceptive, network_features=mlp_layers, encoder_features=encoder_layers ,activation_function=activation_function)}
+        models_ppo = {  "policy": StochasticActorHeightmap(env.observation_space, env.action_space, networkInfo, observerationInfo ),
+                    "value": DeterministicHeightmap(env.observation_space, env.action_space, networkInfo,observerationInfo)}
 
         # print()
  
@@ -171,13 +171,16 @@ class TrainerSKRL():
                 action_space=env.action_space,
                 device=device)
         #agent.migrate("best.pt")
-        agent.load("agent_240000.pt")
+        #agent.load("agent_219000.pt")
+        #agent.load("agent_13000.pt")
+        agent.load("agent_939000.pt")
         # Configure and instantiate the RL trainer
         cfg_trainer = {"timesteps": 1000000, "headless": True}
         trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
         # start training
         trainer.eval()
+        #trainer.train()
 
     def start_training_sweep(self,n_sweeps):
         self.start_simulation()
@@ -202,7 +205,8 @@ class TrainerSKRL():
 
     def sweep(self):
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.wandb_name = f"test-Anton_{time_str}"
+        #self.wandb_name = f"test-Anton_{time_str}"
+        self.wandb_name = f"no_dense_encoder"
         run = wandb.init(project='isaac-rover-2.0', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="aalborg-university")
         self.cfg_ppo["learning_rate"] = wandb.config.lr
         self.cfg_ppo["mini_batches"] = wandb.config.mini_batches

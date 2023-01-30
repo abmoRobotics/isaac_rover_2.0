@@ -40,7 +40,6 @@ class ObserverationInfo():
     def get_num_beneath(self):
         return self.num_beneath
 
-
 class NetworkInfo():
     """
     This class is used to store the network architecture and activation function.
@@ -69,7 +68,6 @@ class NetworkInfo():
         return self.activation_function
     def get_total_length(self):
         return self.sparse_encoder_features[-1] + self.dense_encoder_features[-1] + self.beneath_encoder_features[-1]
-
 
 class Layer(nn.Module):
     """
@@ -151,7 +149,6 @@ class Encoder(nn.Module):
             x = layer(x)
         return(x)
 
-
 class StochasticActorHeightmap(GaussianMixin, Model):
     def __init__(self, observation_space, action_space, networkInfo: NetworkInfo, observartionInfo: ObserverationInfo, device='cuda:0', clip_actions=False, clip_log_std = True, min_log_std= -20.0, max_log_std = 2.0, reduction="sum"):
         #super().__init__(observation_space, action_space, device, clip_actions)
@@ -171,12 +168,12 @@ class StochasticActorHeightmap(GaussianMixin, Model):
         self.encoder1 = Encoder(self.num_dense, self.dense_features, activation_function)
         #self.encoder2 = Encoder(self.num_beneath,self.beneath_features,self.activation_function)
 
-        self.num_exteroceptive = self.num_proprioception+self.sparse_features+self.num_dense  # External information (Heightmap)
+        self.num_exteroceptive = self.num_sparse+self.num_dense  # External information (Heightmap)
         self.num_proprioception = observation_space.shape[0] - self.num_exteroceptive 
         self.network = nn.ModuleList()  # MLP for network
 
         # Create MLP
-        in_channels = self.num_proprioception + self.num_sparse + self.num_dense + self.num_beneath
+        in_channels = self.num_proprioception + self.dense_features[-1] + self.sparse_features[-1] #+ self.num_beneath
         for feature in self.mlp_features:
             self.network.append(Layer(in_channels, feature, activation_function))
             in_channels = feature
@@ -186,14 +183,13 @@ class StochasticActorHeightmap(GaussianMixin, Model):
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
 
     def compute(self, states, taken_actions, role):
-        sparse = states[:,self.num_proprioception:self.num_proprioception+self.sparse_features]
-        dense = states[:,self.num_proprioception+self.sparse_features:self.num_proprioception+self.sparse_features+self.num_dense]
+        sparse = states[:,self.num_proprioception:self.num_proprioception+self.num_sparse]
+        dense = states[:,self.num_proprioception+self.num_sparse:self.num_proprioception+self.num_sparse+self.num_dense]
         
         x0 = self.encoder0(sparse)
         x1 = self.encoder1(dense)
         x = torch.cat((states[:,0:self.num_proprioception], x0), dim=1)
         x = torch.cat((x, x1), dim=1)
-
         for layer in self.network:
             x = layer(x)
         return x, self.log_std_parameter
@@ -218,12 +214,12 @@ class DeterministicHeightmap(DeterministicMixin, Model):
         self.encoder1 = Encoder(self.num_dense, self.dense_features, activation_function)
         #self.encoder2 = Encoder(self.num_beneath,self.beneath_features,self.activation_function)
 
-        self.num_exteroceptive = self.num_proprioception+self.sparse_features+self.num_dense  # External information (Heightmap)
+        self.num_exteroceptive = self.num_sparse+self.num_dense  # External information (Heightmap)
         self.num_proprioception = observation_space.shape[0] - self.num_exteroceptive 
         self.network = nn.ModuleList()  # MLP for network
 
         # Create MLP
-        in_channels = self.num_proprioception + self.num_sparse + self.num_dense + self.num_beneath
+        in_channels = self.num_proprioception + self.dense_features[-1] + self.sparse_features[-1]
         for feature in self.mlp_features:
             self.network.append(Layer(in_channels, feature, activation_function))
             in_channels = feature
@@ -232,8 +228,8 @@ class DeterministicHeightmap(DeterministicMixin, Model):
 
 
     def compute(self, states, taken_actions, role):
-        sparse = states[:,self.num_proprioception:self.num_proprioception+self.sparse_features]
-        dense = states[:,self.num_proprioception+self.sparse_features:self.num_proprioception+self.sparse_features+self.num_dense]
+        sparse = states[:,self.num_proprioception:self.num_proprioception+self.num_sparse]
+        dense = states[:,self.num_proprioception+self.num_sparse:self.num_proprioception+self.num_sparse+self.num_dense]
         
         x0 = self.encoder0(sparse)
         x1 = self.encoder1(dense)
@@ -242,4 +238,4 @@ class DeterministicHeightmap(DeterministicMixin, Model):
 
         for layer in self.network:
             x = layer(x)
-        return x, self.log_std_parameter
+        return x

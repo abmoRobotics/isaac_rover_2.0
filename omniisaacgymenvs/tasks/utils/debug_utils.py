@@ -33,8 +33,8 @@ def draw_depth(heightmap_points: torch.tensor, depth_points: torch.tensor,):
     draw.clear_lines()
     #print(rover_distribution)
     #print(depth_points)
-    #draw.draw_lines(rover_distribution, depth_points, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
-    draw.draw_lines(depth_points, depth_points2, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
+    draw.draw_lines(rover_distribution, depth_points, [(1, 0.0, 0.0, 0.9)]*N, [3]*N)
+    #draw.draw_lines(depth_points, depth_points2, [(1, 0.0, 0.0, 0.9)]*N, [3]*N)
     # if depth_points:
         #draw.draw_lines(rover_distribution, rover_distribution2, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
     # else:

@@ -136,11 +136,8 @@ def Ackermann(lin_vel, ang_vel):
 def Ackermann2(lin_vel, ang_vel, device='cuda:0'):
     # type: (Tensor, Tensor, str) -> Tuple[Tensor, Tensor]
     # All measurements in Meters!
-    scale = 0.3333
-
     num_robots = lin_vel.shape[0]
-    wheel_diameter = 0.2 * scale
-
+    wheel_diameter = 0.2 
     # Locations of the wheels, with respect to center(between middle wheels) (X is right, Y is forward)
     wheel_FL = torch.unsqueeze(torch.transpose(torch.tensor(  [[-0.385],[0.438]],  device=device).repeat(1,num_robots), 0, 1),0)
     wheel_FR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.385],[0.438]],   device=device).repeat(1,num_robots), 0, 1),0)
@@ -150,10 +147,10 @@ def Ackermann2(lin_vel, ang_vel, device='cuda:0'):
     wheel_RR = torch.unsqueeze(torch.transpose(torch.tensor(  [[0.385],[-0.411]],  device=device).repeat(1,num_robots), 0, 1),0)
     
     # Wheel locations, collected in a single variable
-    wheel_locations = torch.cat((wheel_FL, wheel_FR, wheel_ML, wheel_MR, wheel_RL, wheel_RR), 0) * scale
+    wheel_locations = torch.cat((wheel_FL, wheel_FR, wheel_ML, wheel_MR, wheel_RL, wheel_RR), 0) 
     
     # The distance at which the rover should switch to turn on the spot mode.
-    bound = 0.45 * scale
+    bound = 0.45 
     
     # Turning point
     P = torch.unsqueeze(lin_vel/ang_vel, 0)
@@ -183,7 +180,7 @@ def Ackermann2(lin_vel, ang_vel, device='cuda:0'):
     motor_velocities = torch.where(dist > 1000, torch.transpose(lin_vel.repeat((6,1)), 0, 1), motor_velocities)
 
     # Convert linear velocity above ground to rad/s
-    motor_velocities = (motor_velocities/wheel_diameter)*scale
+    motor_velocities = (motor_velocities/wheel_diameter)
     
     steering_angles = torch.transpose(torch.where(torch.abs(wheel_locations[:,:,0]) > torch.abs(P[:,:,0]), torch.atan2(wheel_locations[:,:,1], wheel_locations[:,:,0] - P[:,:,0]), torch.atan2(wheel_locations[:,:,1], wheel_locations[:,:,0] - P[:,:,0])), 0, 1)
     steering_angles = torch.where(steering_angles < -3.14/2, steering_angles + math.pi, steering_angles)

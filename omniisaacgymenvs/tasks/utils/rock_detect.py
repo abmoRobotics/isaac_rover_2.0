@@ -49,7 +49,7 @@ class Rock_Detection():
     def get_num_exteroceptive(self):
         return self.num_exteroceptive
 
-    def get_depths(self, positions, rotations, joint_states):
+    def get_collisions(self, positions, rotations, joint_states):
         """
         Returns a depthmap for a robot based on position and rotation
 
@@ -60,7 +60,11 @@ class Rock_Detection():
         rotations : torch.tensor
             translation of the map, relative to the global reference frame of the simulation
         """
-        sources, directions = self._get_wheel_rays(positions, rotations, joint_states)
+        sources1, directions1 = self._get_wheel_rays(positions, rotations, joint_states)
+        sources2, directions2 = self._get_body_rays(positions, rotations)
+        sources = torch.cat((sources1, sources2), 1)
+        directions = torch.cat((directions1, directions2), 1)
+
         depth_points = sources[:,:,0:2]
         triangles,triangles_with_indices = self._height_lookup(self.rock_indices,depth_points,self.horizontal,self.shift)
         self.initialmemory = torch.cuda.memory_reserved(0)
@@ -138,7 +142,11 @@ class Rock_Detection():
 
             except:
                 print("Isaac Sim not running")
-        return output_distances, output_pt, sources
+
+        wheel_dist = output_distances[:,0:24]
+        body_dist = output_distances[:,24:]
+
+        return wheel_dist, body_dist
 
     def _load_triangles_with_indices(self):
         """Loads triangles with indicies to vertices, each triangle is a 3D vector"""
@@ -180,7 +188,7 @@ class Rock_Detection():
         """
 
         # X:0, Y:1, Z:2
-    # Setup
+        # Setup
         # Location of the rays around the wheel. The last vector descibes the direction of projection
         wheel_rays = wheel_FL = torch.tensor(  [[[0.215/2],[0.130/2],[0.1]],      #Ray 1            
                                                 [[0.215/2],[-0.130/2],[0.1]],     #Ray 2
@@ -213,7 +221,7 @@ class Rock_Detection():
         wheels = wheel_positions0.shape[0]
         num_points = wheels * (wheel_rays.shape[0]) 
 
-    # Formatting
+        # Formatting
         # Expand wheel positions, and set translation for direction vector equal to zero.
         wheel_positions0 = wheel_positions0.repeat_interleave(rays_per_wheel+1,dim=0)
         wheel_positions0[4::5] = torch.zeros(wheel_positions0[4::5].shape, device=self.device)
@@ -235,7 +243,7 @@ class Rock_Detection():
         # Add a dimenion to joint_states - Makes concatenation easier
         joint_states = joint_states.expand(1, -1, -1)
         
-    # Steering transform
+        # Steering transform
         # Get steering angles for wheels.                          FL                   FR         CL                                     CR                                                RL                   RR
         steer_angles = torch.transpose(torch.cat((joint_states[:,:,4], joint_states[:,:,6], torch.zeros_like(joint_states[:,:,6]), torch.zeros_like(joint_states[:,:,6]), -joint_states[:,:,7], joint_states[:,:,8]), 0), 0, 1)
         steer_angles = steer_angles.repeat_interleave((rays_per_wheel+1),1)
@@ -249,7 +257,7 @@ class Rock_Detection():
         y1 = wheel_positions0[:,:,1,0] + y*cosst - x*sinst
         z1 = wheel_positions0[:,:,2,0] + z
 
-    # Suspension transform
+        # Suspension transform
         # Get joint angles for the respective rotation axises
         #                       FL                                                FR                                     CL                                     CR                                     RL                                     RR
         susY = torch.transpose( torch.cat((-joint_states[:,:,0],                  joint_states[:,:,1],                   -joint_states[:,:,0],                  joint_states[:,:,1],                   torch.zeros_like(joint_states[:,:,0]), torch.zeros_like(joint_states[:,:,0]) ), 0), 0, 1)
@@ -268,7 +276,7 @@ class Rock_Detection():
         y2 = wheel_positions1[:,:,1,0] + y1 * cossux + z1 * sinsux
         z2 = wheel_positions1[:,:,2,0] + x1 * sinsuy + cossuy * (z1*cossux - y1*sinsux)
 
-    # Rover transform
+        # Rover transform
         # Compute sin and cos to rover rotation angles - Sizes: [n, 1]
         sinxr = torch.transpose(torch.sin(-rotations[:,0].expand(1, num_robots)), 0, 1)
         cosxr = torch.transpose(torch.cos(-rotations[:,0].expand(1, num_robots)), 0, 1)
@@ -298,7 +306,7 @@ class Rock_Detection():
         y_p = rover_yl + coszr * (y2*cosxr + z2*sinxr) - sinzr * (x2*cosyr - sinyr*(z2*cosxr - y2*sinxr))
         z_p = rover_zl + x2*sinyr + cosyr*(z2*cosxr - y2*sinxr)
 
-    # Formatting
+        # Formatting
         #Stack points in a [x, y, 3] matrix, and return
         sources = torch.stack((x_p[:,:], y_p[:,:], z_p[:,:]), 2)
 
@@ -309,6 +317,58 @@ class Rock_Detection():
         sources = sources.reshape(-1,5,3)[:,:4].reshape(num_robots, wheels * (rays_per_wheel), 3)
 
         return sources.type(torch.float16), ray_dir.type(torch.float16)
+
+    def _get_body_rays(self, rover_l, rover_r):
+        """Transforms the local heightmap of the rover, into the global frame"""
+        # X:0, Y:1, Z:2
+
+        # The location of the body rays on each rover
+        rover_depth_points = torch.tensor([[0.340,0,-0.01],[-0.485,0,-0.01]], device=self.device)
+
+        # Get number of points and number of robots from input
+        num_points = rover_depth_points.size()[0] + 1 # +1 to add plane-normal
+        num_robots = rover_r.size()[0]
+
+        # Expand depth point vectors to be martix of size[1, x](from vector of size[x])
+        x = rover_depth_points[:,0].expand(1, num_points-1)
+        y = rover_depth_points[:,1].expand(1, num_points-1)
+        z = rover_depth_points[:,2].expand(1, num_points-1)
+
+        # Add [1, 0, 0] as the last point
+        x = torch.cat((x, torch.tensor([0], device=self.device).expand(1, 1)), 1)
+        y = torch.cat((y, torch.tensor([1], device=self.device).expand(1, 1)), 1)
+        z = torch.cat((z, torch.tensor([0], device=self.device).expand(1, 1)), 1)
+
+        # Compute sin and cos to all angles - Sizes: [n, 1]
+        sinxr = torch.transpose(torch.sin(-rover_r[:,0].expand(1, num_robots)), 0, 1)
+        cosxr = torch.transpose(torch.cos(-rover_r[:,0].expand(1, num_robots)), 0, 1)
+        sinyr = torch.transpose(torch.sin(-rover_r[:,1].expand(1, num_robots)), 0, 1)
+        cosyr = torch.transpose(torch.cos(-rover_r[:,1].expand(1, num_robots)), 0, 1)
+        sinzr = torch.transpose(torch.sin(-rover_r[:,2].expand(1, num_robots)), 0, 1)
+        coszr = torch.transpose(torch.cos(-rover_r[:,2].expand(1, num_robots)), 0, 1)
+
+        # Expand location vector to be of size[x, y], from size[x]: [n, p]
+        rover_xl = torch.transpose(rover_l[:, 0].expand(num_points,num_robots), 0, 1)
+        rover_yl = torch.transpose(rover_l[:, 1].expand(num_points,num_robots), 0, 1)
+        rover_zl = torch.transpose(rover_l[:, 2].expand(num_points,num_robots), 0, 1)
+
+        # Transform points in the pointcloud
+        x_p = rover_xl + sinzr * (y*cosxr + z*sinxr) + coszr * (x*cosyr - sinyr*(z*cosxr - y*sinxr))
+        y_p = rover_yl + coszr * (y*cosxr + z*sinxr) - sinzr * (x*cosyr - sinyr*(z*cosxr - y*sinxr))
+        z_p = rover_zl + x*sinyr + cosyr*(z*cosxr - y*sinxr)
+        
+        # Extract the plane-normal as the last point
+        x = (x_p[:,num_points-1]-rover_l[:, 0]).unsqueeze(1)
+        y = (y_p[:,num_points-1]-rover_l[:, 1]).unsqueeze(1)
+        z = (z_p[:,num_points-1]-rover_l[:, 2]).unsqueeze(1)
+        rover_dir = torch.cat((x, y, z),1).unsqueeze(1)
+     
+        rover_dir = rover_dir.repeat(1,num_points-1,1)#.swapaxes(0,1)
+        
+        #Stack points in a [x, y, 3] matrix, and return
+        sources = torch.stack((x_p[:,0:num_points-1], y_p[:,0:num_points-1], z_p[:,0:num_points-1]), 2)
+
+        return sources.type(self.dtype), rover_dir.type(self.dtype)
 
     def _height_lookup(self, triangle_matrix: torch.Tensor, depth_points: torch.Tensor, horizontal_scale, shift):
         """Look up the nearest triangles relative to an x, y coordinate"""
