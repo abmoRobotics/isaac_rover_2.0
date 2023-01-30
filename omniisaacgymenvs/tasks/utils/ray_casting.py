@@ -58,7 +58,7 @@ def ray_distance(sources: torch.Tensor, directions: torch.Tensor, triangles: tor
     # filter out based on the condition ((n >= 0.0) & (m >= 0.0) & (n + m <= 1.0))
     k_after_check = torch.where(((n >= zeros) & (m >= zeros) & (n + m <= ones)),k,error_tensor)
 
-
+    
     # Calucate the intersection point
     pt = sources -(d.swapaxes(0,1)*k_after_check).swapaxes(0,1)
     
