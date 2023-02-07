@@ -32,7 +32,7 @@ https://user-images.githubusercontent.com/56405924/212775747-afaa91c2-4a10-458d-
 2. Clone this repository 
 ``` bash
 git clone https://github.com/abmoRobotics/isaac_rover_2.0.git
-cd Pointfilter
+cd isaac_rover_2.0
 ```
 3. Set Isaac Sim `PYTHON_PATH`
 ``` bash
@@ -49,5 +49,6 @@ PYTHON_PATH -m pip install -e .
 To train a policy, run:
 
 ```bash
-PYTHON_PATH train.py
+1. cd omniisaacgymenvs
+2. PYTHON_PATH train.py
 ```
