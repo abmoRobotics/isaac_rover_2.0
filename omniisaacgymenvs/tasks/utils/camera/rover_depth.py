@@ -5,7 +5,27 @@ from omni.isaac.debug_draw import _debug_draw
 import random
 
 
+"""
 
+    depth_transform(rover_l, rover_r, rover_depth_points):
+    This function transfroms the points on a rover's depth-sensor pointcloud
+    from the rover's local coordinate frame to the global coordinate frame. 
+    
+    Parameters:
+        rover_l (torch.tensor): This is a tensor containing the current location of each rover.
+            It is of shape [num_robots, 3], where each row contains the x, y, z coordinates of the rover.
+        rover_r (torch.tensor): This is a tensor containing the current orientation of each rover.
+            It is of shape [num_robots, 3], where each row contains the roll, pitch, yaw rotation of the rover.
+        rover_depth_points (torch.tensor): This is a tensor containing the depth-sensor points of each rover.
+            It is of shape [num_points, 3], where each row contains the x, y, z coordinates of the point.
+            The points are in the rover's local coordinate frame.
+    
+    Returns:
+        pointcloud (torch.tensor): This is a tensor containing the pointcloud of all the rovers in the global coordinate frame.
+            It is of shape [num_robots, num_points, 3], where each row contains the x, y, z coordinates of the point.
+        rover_dir (list): This is a list containing the orthogonal directions of each rover in the global coordinate frame.
+            It is of shape [num_robots, 3], where each row contains the x, y, z components of the direction.
+"""
 def depth_transform(rover_l, rover_r, rover_depth_points):
     # X:0, Y:1, Z:2
 
@@ -47,47 +67,3 @@ def depth_transform(rover_l, rover_r, rover_depth_points):
     #Stack points in a [x, y, 3] matrix, and return
     return torch.stack((x_p[:,0:num_points-1], y_p[:,0:num_points-1], z_p[:,0:num_points-1]), 2), rover_dir
 
-# def draw_depth(heightmap_points: torch.tensor, depth_points: torch.tensor,):
-#     draw = _debug_draw.acquire_debug_draw_interface()
-#     # print(heightmap_points.shape)
-#     # print(depth_points.shape)
-#     rover_distribution = heightmap_points.tolist()
-#     depth_points = depth_points.tolist()
-#     N = len(rover_distribution)
-
-#     rover_distributionZ = []
-#     rover_distribution2 = []
-    
-#     for i in range(N):
-#         rover_distributionZ.append(rover_distribution[i][2]+0.1)
-
-#     for i in range(N):
-#         rover_distribution2.append([rover_distribution[i][0], rover_distribution[i][1], rover_distributionZ[i]])
-
-#     colors = [3 for _ in range(N)]
-#     sizes = [[3] for _ in range(N)]
-#     draw.clear_lines()
-#     #print(rover_distribution)
-#     #print(depth_points)
-#     draw.draw_lines(rover_distribution, depth_points, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
-#     # if depth_points:
-#     #     draw.draw_lines(rover_distribution, rover_distribution2, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
-#     # else:
-#     #     draw.draw_lines(rover_distribution, depth_points, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
-
-
-# def draw_point(points, color):
-#     draw = _debug_draw.acquire_debug_draw_interface()
-#     N = 1
-
-#     point_list = points.tolist()
-#     draw.clear_points()
-#     draw.draw_points([point_list], color, [55])
-
-# def draw_coord():
-#     draw = _debug_draw.acquire_debug_draw_interface()
-#     N = 4
-#     point_list = [[0,0,0],[1,0,0],[0,1,0],[0,0,1]]
-#     colors = [[0.1, 0.1, 0.1, 0.9],[1.0, 0.0, 0.0, 0.9],[0.0, 1.0, 0.0, 0.9],[0.0, 0.0, 1.0, 0.9]]
-#     draw.clear_points()
-#     draw.draw_points(point_list, colors, [55]*N)

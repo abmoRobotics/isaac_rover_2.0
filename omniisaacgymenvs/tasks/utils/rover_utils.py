@@ -64,16 +64,14 @@ def _get_knn_triangles(file_name, save_path,res_x=1200, res_y=1200,res=0.05,n_tr
     # Get vertices and triangles from mesh
     vertices = np.asarray(mesh.vertices)
     triangles = np.asarray(mesh.triangles)
-    #print(vertices.shape)
-    #print(triangles.shape)
-    #print(vertices[triangles[:,0]][:,0].shape)
+
     # Calculate center of each triangle 
     x = (vertices[triangles[:,0]][:,0] + vertices[triangles[:,1]][:,0] + vertices[triangles[:,2]][:,0]) / 3
     y = (vertices[triangles[:,0]][:,1] + vertices[triangles[:,1]][:,1] + vertices[triangles[:,2]][:,1]) / 3
     z = (vertices[triangles[:,0]][:,2] + vertices[triangles[:,1]][:,2] + vertices[triangles[:,2]][:,2]) / 3
     center = np.array([x,y])
     center = torch.tensor(center,device=device,dtype=torch.float16)
-    print(center.shape)
+
   
     # Create matrix which contains value corresponding to the spatial x, y position
     xx = torch.arange(0,res_x*res,res,device=device,dtype=torch.float16)
@@ -83,57 +81,33 @@ def _get_knn_triangles(file_name, save_path,res_x=1200, res_y=1200,res=0.05,n_tr
     map[1] = torch.transpose(map[1]*yy, 0, 1)
     map = map.swapaxes(0,1)
     map = map.swapaxes(1,2)
-    print(map[0,0:10,:])
     
     index =torch.tensor([1,0],device=device,dtype=torch.int64)
     map = torch.index_select(map,2,index) # 1200 x 1200 x 2
-    #print(m[0:10,0])
-    #exit()
-    #print(map[0:100,0].unsqueeze(-1).shape)
     # Create empty array for storing triangles 
     #x = torch.tensor([[1, 1],[0,0]],device=device,dtype=torch.float16)
     # Create empty array for storing knn
     knn_indices = torch.ones(n_triangles,res_x,res_y,device=device,dtype=torch.int32)
 
-    #print(center.shape)
-    #x = x.repeat(center.shape[1],1).swapaxes(0,1)
-    #x = x.unsqueeze(-1)
+ 
     center = center.repeat(100,1,1) # 100 x 2 x 398677
-    print(center.shape)
     # For loop for finding the 100 nearest triangles(relative to x,y) to each spatial x,y position in the map matrix.
     for x in range(int(res_x/100)):
-        print(x)
         for y in range(res_y):
             # Get 100 x,y positions from the map
             data = map[x*100:x*100+100,y].unsqueeze(-1) # 100 x 2 x 1
-            #print(center[:,:,10])
-            #print(data[:,:,0])
-            #print(torch.norm(center[:,:,10] - data[:,:,0],dim=1))
+        
             temp = torch.norm(center[:,:,10] - data[:,:,0],dim=1)
             # Calculate the difference between the center of the triangles and the data.
             dist = torch.norm(center - data,dim=1)
-            #print(dist[:,10] - temp)
-            #print(dist.shape)
-            #exit()
-            #print(dist[50,0])
-            
-            #print(dist)
+
             # Get the smallest 100 distances
             knn = dist.topk(n_triangles, largest=False)
-            # print(knn.values[0,:])
-            # print(knn.indices[0,:])
-            
-            #print(knn.values[0])
-            
-            #print(knn)
+
             # Save the indices
             knn_indices[:,x*100:x*100+100,y] = knn.indices.swapaxes(0,1) # 100 x 1200 x 1200
-            # print(knn_indices[:,0,0])
-   
             vertices = torch.tensor(vertices,device=device,dtype=torch.float16)
             triangles = torch.tensor(triangles,device=device,dtype=torch.int32)
-            #print(vertices[triangles[knn_indices[:,x*100,y].long()].long()])
-            #exit()
  
 
     vertices = torch.tensor(vertices,device=device,dtype=torch.float16)
@@ -194,9 +168,6 @@ def rover_spawn_height(heightmap: torch.Tensor, depth_points: torch.Tensor, hori
 
     # Lookup heights in heightmap
     heights = heightmap[x, y]
-    # print(x)
-    # print("y")
-    # print(y)
     
     # Scale to fit actual height, dependent on resolution
     heights = heights * vertical_scale
@@ -210,9 +181,6 @@ def test_height_lookup():
     map_values=map_values.swapaxes(1,2)
     depth_points = torch.tensor([[[1,1,0],[1,1,1]],[[1,2,0],[2,3,0]]],device='cuda:0')
     horizontal = 0.05
-    print(map_values.shape)
-    print(height_lookup(map_values,depth_points,horizontal,shift).shape)
-    print(depth_points.shape)
 
 
 
@@ -227,9 +195,3 @@ def load_terrain(file_name):
     return vertices, faces
 if __name__ == "__main__":
     generate_knn_triangles()
-# heightmap = torch.load("heightmap_tensor.pt")
-# # for i in range(1200):
-# #     print(heightmap[i][180])
-# #     print(heightmap.shape)
-# #print(heightmap[1200][0])
-# print(heightmap[1200][240])

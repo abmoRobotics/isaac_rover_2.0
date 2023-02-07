@@ -20,7 +20,6 @@ class student_loader():
 
     def act(self,observations):
         with torch.no_grad():
-            #print(observations.shape)
             actions, predictions, self.h = self.model(observations.unsqueeze(1),self.h)
             return actions
 

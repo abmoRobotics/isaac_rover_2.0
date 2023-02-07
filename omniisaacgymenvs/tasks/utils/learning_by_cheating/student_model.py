@@ -121,8 +121,6 @@ class Belief_Decoder(nn.Module):
     def forward(self, e, h):
         gate = h[-1]
         decoded = h[-1]
-       # gate = gate.repeat(e.shape[1], 1, 1).permute(1,0,2)
-       # decoded = decoded.repeat(e.shape[1], 1, 1).permute(1,0,2)
         for layer in self.gate_encoder:
             gate = layer(gate)
 

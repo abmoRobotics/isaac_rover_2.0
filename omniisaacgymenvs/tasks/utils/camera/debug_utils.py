@@ -7,8 +7,6 @@ import random
 
 def draw_depth(heightmap_points: torch.tensor, depth_points: torch.tensor,):
     draw = _debug_draw.acquire_debug_draw_interface()
-    # print(heightmap_points.shape)
-    # print(depth_points.shape)
     rover_distribution = heightmap_points.tolist()
     depth_points = depth_points.tolist()
     N = len(rover_distribution)
@@ -31,8 +29,6 @@ def draw_depth(heightmap_points: torch.tensor, depth_points: torch.tensor,):
     colors = [3 for _ in range(N)]
     sizes = [[3] for _ in range(N)]
     draw.clear_lines()
-    #print(rover_distribution)
-    #print(depth_points)
     draw.draw_lines(rover_distribution, depth_points, [(1, 0.0, 0.0, 0.9)]*N, [3]*N)
     #draw.draw_lines(depth_points, depth_points2, [(1, 0.0, 0.0, 0.9)]*N, [3]*N)
     # if depth_points:

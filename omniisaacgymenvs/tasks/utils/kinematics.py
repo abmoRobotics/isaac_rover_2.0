@@ -7,10 +7,6 @@ import math
 import torch
 import time
 
-
-
-
-
 # This is the new kinematics function
 # The inputs are m/s and rad/s. The dimensions are for the mars rover 2.0 project - units in meters.
 # The code is made with basis in appendix D in the repport "Mapless Mobile Navigation on Mars using Reinforcement Learning"
