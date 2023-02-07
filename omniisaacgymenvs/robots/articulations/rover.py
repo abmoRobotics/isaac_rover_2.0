@@ -56,8 +56,8 @@ class Rover(Robot):
             if assets_root_path is None:
                 carb.log_error("Could not find Isaac Sim assets folder")
             #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified7.usd" # this was used for training
-            #self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified9.usd"
-            self._usd_path = os.getcwd() + "/robots/articulations/simplified9.usd"
+            self._usd_path = "http://localhost:8080/omniverse://127.0.0.1/Projects/simplified9.usd"
+            #self._usd_path = os.getcwd() + "/robots/articulations/simplified9.usd"
             #self._usd_path = "robots/articulations/simplified3.usd"
 
         add_reference_to_stage(self._usd_path, prim_path)   

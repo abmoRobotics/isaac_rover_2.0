@@ -1,1 +1,1 @@
-alias PYTHON_PATH=~/.local/share/ov/pkg/isaac_sim-*/python.sh
+alias PYTHON_PATH=~/.local/share/ov/pkg/isaac_sim-2022.2.0/python.sh

@@ -88,9 +88,10 @@ class TrainerSKRL():
     def __init__(self):
         self._load_cfg()
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.wandb_group =f"Improved_{time_str}"
-        #self.wandb_group ="remove"
-        self.wandb_name = f"run_{time_str}"
+        #self.wandb_group =f"Improved_{time_str}"
+        self.wandb_group ="New"
+        #self.wandb_name = f"run_{time_str}"
+        self.wandb_name = "Run1"
        # self.start_simulation()
         #self.start_training()
 
@@ -173,14 +174,14 @@ class TrainerSKRL():
         #agent.migrate("best.pt")
         #agent.load("agent_219000.pt")
         #agent.load("agent_13000.pt")
-        agent.load("agent_939000.pt")
+        #agent.load("agent_939000.pt")
         # Configure and instantiate the RL trainer
         cfg_trainer = {"timesteps": 1000000, "headless": True}
         trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
         # start training
-        trainer.eval()
-        #trainer.train()
+        #trainer.eval()
+        trainer.train()
 
     def start_training_sweep(self,n_sweeps):
         self.start_simulation()
@@ -206,7 +207,7 @@ class TrainerSKRL():
     def sweep(self):
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         #self.wandb_name = f"test-Anton_{time_str}"
-        self.wandb_name = f"no_dense_encoder"
+        self.wandb_name = "no_dense_encoder"
         run = wandb.init(project='isaac-rover-2.0', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="aalborg-university")
         self.cfg_ppo["learning_rate"] = wandb.config.lr
         self.cfg_ppo["mini_batches"] = wandb.config.mini_batches
@@ -216,7 +217,7 @@ class TrainerSKRL():
     def start_training(self):
         self.start_simulation()
         config = self.log_parameters()
-        log=False
+        log=True
         if log:
             wandb.init(project='isaac-rover-2.0', config=config, sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="aalborg-university")
         self.train()
