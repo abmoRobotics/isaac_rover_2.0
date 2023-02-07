@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import open3d as o3d
-from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
-from omniisaacgymenvs.tasks.utils.ray_casting import ray_distance
+from omniisaacgymenvs.tasks.utils.camera.debug_utils import draw_depth
+from omniisaacgymenvs.tasks.utils.camera.ray_casting import ray_distance
 import time
 
 class Rock_Detection():

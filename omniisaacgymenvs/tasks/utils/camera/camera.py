@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import open3d as o3d
-from omniisaacgymenvs.tasks.utils.heightmap_distribution import heightmap_distribution
-from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
-from omniisaacgymenvs.tasks.utils.ray_casting import ray_distance
-from omniisaacgymenvs.utils.heightmap_distribution import Heightmap
+#from omniisaacgymenvs.tasks.utils.camera.heightmap_distribution import heightmap_distribution
+from omniisaacgymenvs.tasks.utils.camera.debug_utils import draw_depth
+from omniisaacgymenvs.tasks.utils.camera.ray_casting import ray_distance
+from omniisaacgymenvs.tasks.utils.camera.heightmap_distribution import Heightmap
 import time
 
 class Camera():

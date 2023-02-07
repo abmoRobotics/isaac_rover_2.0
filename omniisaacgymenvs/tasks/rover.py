@@ -42,19 +42,16 @@ from omni.isaac.core.utils.stage import get_current_stage
 from omniisaacgymenvs.robots.articulations.rover import Rover
 from omniisaacgymenvs.robots.articulations.views.rover_view import RoverView
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from omniisaacgymenvs.tasks.utils.anymal_terrain_generator import *
-from omniisaacgymenvs.tasks.utils.debug_utils import draw_depth
 from omniisaacgymenvs.tasks.utils.rover_utils import *
-from omniisaacgymenvs.utils.kinematics import Ackermann2, Ackermann
-from omniisaacgymenvs.utils.terrain_utils.terrain_generation import *
+from omniisaacgymenvs.tasks.utils.kinematics import Ackermann
 from omniisaacgymenvs.utils.terrain_utils.terrain_utils import *
-from omniisaacgymenvs.tasks.utils.teacher_model import Teacher
-from omniisaacgymenvs.tasks.utils.student_model import Student
+from omniisaacgymenvs.tasks.utils.learning_by_cheating.teacher_loader import teacher_loader
+from omniisaacgymenvs.tasks.utils.learning_by_cheating.student_loader import student_loader
 from scipy.spatial.transform import Rotation as R
-from omni.isaac.debug_draw import _debug_draw
-from omniisaacgymenvs.tasks.utils.tensor_quat_to_euler import tensor_quat_to_eul
-from omniisaacgymenvs.tasks.utils.camera import Camera
-from omniisaacgymenvs.tasks.utils.rock_detect import Rock_Detection
+#from omni.isaac.debug_draw import _debug_draw
+from omniisaacgymenvs.tasks.utils.math.tensor_quat_to_euler import tensor_quat_to_eul
+from omniisaacgymenvs.tasks.utils.camera.camera import Camera
+from omniisaacgymenvs.tasks.utils.rock_detection.rock_detect import Rock_Detection
 from pxr import UsdPhysics, Sdf, Gf, PhysxSchema, UsdGeom, Vt, PhysicsSchemaTools
 from omni.physx import get_physx_scene_query_interface
 from omni.physx.scripts.physicsUtils import *
@@ -169,8 +166,8 @@ class RoverTask(RLTask):
                 "dense": self.Camera.heightmap.get_num_dense_vector()}
 
                 
-        self.student = Student_Inference(self.num_envs, info)
-        self.teacher = teacher_loader(info, "model1")
+        self.student = student_loader(self.num_envs, info,model_path="best.pt")
+        self.teacher = teacher_loader(info,  model_path="agent_219000.pt")
         
         self.h = self.student.model.belief_encoder.init_hidden(self.num_envs).to('cuda:0')
 
@@ -326,7 +323,7 @@ class RoverTask(RLTask):
         self.obs_buf[:, 3] = self.angular_velocity.get_state(timestep=0) #/ 3
         self.obs_buf[:, self._num_proprioceptive:self._num_proprioceptive+self.Camera.heightmap.get_num_sparse_vector()] = sparse / 2 #* 2
         self.obs_buf[:, self._num_proprioceptive+self.Camera.heightmap.get_num_sparse_vector():] = dense / 2 #* 2
-      #  self.obs_buf[:,4:] = self.obs_buf[:,4:] + (0.20**0.5)*torch.randn(self.num_envs, self.num_observations-4,device=self._device)
+        #self.obs_buf[:,4:] = self.obs_buf[:,4:] + (0.20**0.5)*torch.randn(self.num_envs, self.num_observations-4,device=self._device)
         #self.obs_buf[:,4:] = F.dropout(self.obs_buf[:,4:],p=0.1)
         #self.obs_buf = self.obs_buf-0.02
         #self.obs_buf[:, self.remove_idx+4] = 0
@@ -350,11 +347,11 @@ class RoverTask(RLTask):
             vertices, triangles = load_terrain('map.ply')
             vertices_rocks, triangles_rocks = load_terrain('big_stones.ply')
             
-            
             position = self.shift
             add_stones_to_stage(stage=self._stage, vertices=vertices_rocks, triangles=triangles_rocks, position=self.shift)
             add_terrain_to_stage(stage=self._stage, vertices=vertices, triangles=triangles, position=position)
             self.curriculum_level = 2 
+
         # Get the environemnts ids of the rovers to reset
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
@@ -378,20 +375,12 @@ class RoverTask(RLTask):
             self.data_curr_timestep[:,2] = _actions[:,1]
         self._name = 'rover_eval_no_noise_teacher_rocks_small_area_removedv5'
         
-       # print(_actions[1])
-        # print(b[1])
         # Track states
         self.linear_velocity.input_state(_actions[:,0]) # Track linear velocity
         self.angular_velocity.input_state(_actions[:,1]) # Track angular velocity
 
-        
-        # print(a[1])
-        # _actions[0:2,0]=1
-        # _actions[0:2,1]=0.0
-        # _actions[2:4,0]=1.0
-        # _actions[2:4,1]=1
-        
-        # Code for running in Acker%%%%Amann mode
+
+        # Code for running in Ackermann mode
         _actions[:,0] = _actions[:,0] #* 9 #1.17 # max speed
         _actions[:,1] = _actions[:,1] #* 9 # 1.17#(1.17/0.58) # max speed / distance to wheel furthest away in meters
         
@@ -399,10 +388,10 @@ class RoverTask(RLTask):
         
         self.actions_nn = torch.cat((torch.reshape(_actions,(self.num_envs, self._num_actions, 1)), self.actions_nn), 2)[:,:,0:3]
         self.actions_nn = self.actions_nn
-        steering_angles, motor_velocities = Ackermann2(_actions[:,0], _actions[:,1])
+        steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         #steering_angles, motor_velocities = Ackermann(torch.ones_like(_actions[:,0])*0.8*3, -torch.ones_like(_actions[:,1])*3*3)
         
-        #steering_angles, motor_velocities = Ackermann2(_actions[:,0]*0.0, abs(_actions[:,1]), self.device)
+        #steering_angles, motor_velocities = Ackermann(_actions[:,0]*0.0, abs(_actions[:,1]), self.device)
         # Create a n x 4 matrix for positions, where n is the number of environments/robots
         positions = torch.zeros((self._rover.count, 4), dtype=torch.float32, device=self._device)
         # Create a n x 6 matrix for velocities
@@ -418,20 +407,6 @@ class RoverTask(RLTask):
         velocities[:, 3] = motor_velocities[:,0] # Velocity FL
         velocities[:, 4] = motor_velocities[:,2] # Velocity CL
         velocities[:, 5] = motor_velocities[:,4] # Velocity RL
-
-        # print(velocities[1,5])
-        # print(velocities[3,5])
-        # For debugging
-        # positions[:, 0] = 0 # Position of the front right(FR) motor.
-        # positions[:, 1] = 0 # Position of the rear right(RR) motor.
-        # positions[:, 2] = 0 # Position of the front left(FL) motor.
-        # positions[:, 3] = 0 # Position of the rear left(FL) motor.
-        # velocities[:, 0] = 1 # Velocity FR
-        # velocities[:, 1] = 1 # Velocity CR
-        # velocities[:, 2] = 1 # Velocity RR
-        # velocities[:, 3] = 1 # Velocity FL
-        # velocities[:, 4] = 1 # Velocity CL
-        # velocities[:, 5] = 1 # Velocity RL
 
         # Set position of the steering motors
         self._rover.set_joint_position_targets(positions,indices=None,joint_indices=self._rover.actuated_pos_indices)
@@ -505,13 +480,6 @@ class RoverTask(RLTask):
 
         # Distance to target
         target_dist = torch.sqrt(torch.square(self.target_positions[..., 0:2] - self.rover_positions[..., 0:2]).sum(-1))
-
-        #draw = _debug_draw.acquire_debug_draw_interface()
-        #target_list = self.target_positions[:,0:3].tolist()
-        #rover_list = self.rover_positions[:,0:3].tolist()
-        #N = len(target_list)
-        #draw.clear_lines()
-        #draw.draw_lines(target_list, rover_list, [(0.9, 0.5, 0.1, 0.9)]*N, [3]*N)
 
         # Heading constraint - Avoid driving backwards
         lin_vel = self.linear_velocity.get_state(0)   # Get latest lin_vel
@@ -706,114 +674,3 @@ class RoverTask(RLTask):
 
 
 
-class Student_Inference():
-    def __init__(self, num_envs, info, device='cuda:0') -> None:
-        self.cfg = self.cfg_fn()
-        self.info = info
-        self.model = self.load_model('best.pt')
-        self.h = self.model.belief_encoder.init_hidden(num_envs).to(device)
-        
-
-    def load_model(self, model_name):
-        model = Student(self.info, self.cfg)
-        checkpoint = torch.load(model_name)
-        model.load_state_dict(checkpoint['state_dict'])
-        model.eval()
-        model.cuda()
-
-        return model
-
-    def act(self,observations):
-        with torch.no_grad():
-            #print(observations.shape)
-            actions, predictions, self.h = self.model(observations.unsqueeze(1),self.h)
-            return actions
-
-    def info_fn(self):
-        pass
-
-    def cfg_fn(self):
-        cfg = {
-            "info":{
-                "reset":            0,
-                "actions":          0,
-                "proprioceptive":   0,
-                "exteroceptive":    0,
-            },
-            "learning":{
-                "learning_rate": 1e-4,
-                "epochs": 500,
-                "batch_size": 8,
-            },
-            "encoder":{
-                "activation_function": "leakyrelu",
-                "encoder_features": [80,60]},
-
-            "belief_encoder": {
-                "hidden_dim":       300,
-                "n_layers":         2,
-                "activation_function":  "leakyrelu",
-                "gb_features": [128,128,120],
-                "ga_features": [128,128,120]},
-
-            "belief_decoder": {
-                "activation_function": "leakyrelu",
-                "gate_features":    [128,256,512],
-                "decoder_features": [128,256,512]
-            },
-            "mlp":{"activation_function": "leakyrelu",
-                "network_features": [256,160,128]},
-                }
-
-        return cfg
-
-class teacher_loader():
-    def __init__(self,info,model_path="") -> None:
-        self.cfg = self.cfg_fn()
-        self.info = info
-        self.model = self.load_model(model_path)
-        #self.h = self.model.belief_encoder.init_hidden(1).to('cuda:0')
-
-    def load_model(self, model_path):
-        model = Teacher(self.info, self.cfg, 'agent_219000.pt')
-        #checkpoint = torch.load('agent_219000.pt')
-        #model.load_state_dict(checkpoint['state_dict'])
-        model.eval()
-        model.cuda()
-
-        return model
-
-    def act(self,observations):
-        with torch.no_grad():
-            #print(observations.shape)
-            actions= self.model(observations.unsqueeze(1))
-            return actions
-
-    def cfg_fn(self):
-        cfg = {
-            "info":{
-                "reset":            0,
-                "actions":          0,
-                "proprioceptive":   0,
-                "exteroceptive":    0,
-            },
-            "encoder":{
-                "activation_function": "leakyrelu",
-                "encoder_features": [80,60]},
-
-            "mlp":{"activation_function": "leakyrelu",
-                "network_features": [256,160,128]},
-                }
-
-        return cfg   
-
-info = {
-    "reset": 0,
-    "actions": 2,
-    "proprioceptive": 4,
-    "sparse": 634,
-    "dense": 1112}
-
-
-
-teacher = teacher_loader(info, "model1")

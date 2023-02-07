@@ -50,7 +50,7 @@ wandb_project: 'omniisaacgymenvs'
 # set default task and default training config based on task
 defaults:
   - task: Rover
-  - train: ${task}PPO
+ # - train: ${task}PPO
   - trainSKRL: ${task}PPOSKRL
   - hydra/job_logging: disabled
 

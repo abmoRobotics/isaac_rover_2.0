@@ -84,6 +84,7 @@ class Teacher(nn.Module):
         encoder_dim = cfg["encoder"]["encoder_features"][-1] * 2
         self.MLP = MLP(info, cfg["mlp"], belief_dim=120)
         # Load teacher policy
+        print(teacher)
         teacher_policy = torch.load(teacher)["policy"]
         # Filter out encoder to only maintain network MLP
         mlp_params = {k: v for k,v in teacher_policy.items() if ("network" in k or "log_std_parameter" in k)}

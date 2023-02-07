@@ -35,7 +35,7 @@ from omni.isaac.core.tasks import BaseTask
 from omni.isaac.core.utils.types import ArticulationAction
 from omni.isaac.core.utils.prims import define_prim
 from omni.isaac.cloner import GridCloner
-from omniisaacgymenvs.tasks.utils.usd_utils import create_distant_light
+from omniisaacgymenvs.utils.usd_utils.usd_utils import create_distant_light
 from omniisaacgymenvs.utils.domain_randomization.randomize import Randomizer
 import omni.kit
 

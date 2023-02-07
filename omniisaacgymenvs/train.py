@@ -17,72 +17,13 @@ from omegaconf import DictConfig
 from hydra import compose, initialize
 import wandb
 import datetime
-from omniisaacgymenvs.utils.heightmap_distribution import Heightmap
-
+from omniisaacgymenvs.tasks.utils.camera.heightmap_distribution import Heightmap
+from omniisaacgymenvs.tasks.utils.terrains.extract_terrain import extract_terrain
+import os
 #cfg_ppo = PPO_DEFAULT_CONFIG.copy()
 
 # set the seed for reproducibility
 set_seed(42)
-
-#@hydra.main(config_name="config", config_path="cfg")
-def parse_hydra_configs():
-    initialize(config_path="cfg", job_name="test_app")
-    cfg = compose(config_name="config")
-
-    cfg_ppo = PPO_DEFAULT_CONFIG.copy()
-    cfg_network = cfg.trainSKRL.network
-    cfg_experiment = cfg.trainSKRL.experiment
-    # Set all parameters according to cfg file
-    for param, value in (cfg.trainSKRL.config).items():
-        cfg_ppo[param] = value
-    hydra.core.global_hydra.GlobalHydra.instance().clear()
-    run_simulation(cfg_ppo, cfg_network, cfg_experiment)
-
-
-
-def run_simulation(cfg_ppo, cfg_network, cfg_experiment):
-
-    #print(cfg_ppo)
-    cfg_ppo = PPO_DEFAULT_CONFIG.copy()
-    print(cfg_network.mlp.layers)
-    exit()
-    # Load and wrap the Omniverse Isaac Gym environment
-    env = load_omniverse_isaacgym_env(task_name="Rover")
-    env = wrap_env(env)
-    
-    device = env.device
-
-    # Instantiate a RandomMemory as rollout buffer (any memory can be used for this)
-    memory = RandomMemory(memory_size=60, num_envs=env.num_envs, device=device)
-
-    # Get values from cfg
-    mlp_layers = cfg_network.mlp.layers
-    encoder_layers = cfg_network.encoder.layers
-    activation_function = cfg_network.mlp.activation
-
-    # Instantiate the agent's models (function approximators).
-    models_ppo = {  "policy": StochasticActorHeightmap(env.observation_space, env.action_space, network_features=mlp_layers, encoder_features=encoder_layers, activation_function=activation_function),
-                "value": DeterministicHeightmap(env.observation_space, env.action_space, network_features=mlp_layers, encoder_features=encoder_layers ,activation_function=activation_function)}
-
-    # Instantiate parameters of the model
-    for model in models_ppo.values():
-        model.init_parameters(method_name="normal_", mean=0.0, std=0.05)
-
-    # Define agent
-    agent = PPO(models=models_ppo,
-            memory=memory,
-            cfg=cfg_ppo,
-            observation_space=env.observation_space,
-            action_space=env.action_space,
-            device=device)
-    
-
-    # Configure and instantiate the RL trainer
-    cfg_trainer = {"timesteps": 1600, "headless": False}
-    trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
-
-    # start training
-    trainer.train()
 
 class TrainerSKRL():
     def __init__(self):
@@ -232,6 +173,9 @@ class TrainerSKRL():
         pass
 if __name__ == '__main__':
     # Get hyperparameter config
+    terrainExist = os.path.exists("tasks/utils/terrain/")
+    if not terrainExist:
+        extract_terrain()
     trainer = TrainerSKRL()
    # trainer.start_training_sequential()
     #trainer.start_training_sweep(4)
