@@ -8,13 +8,7 @@ omniisaacgymenvs/tasks/utils/float64/map_indices.pt
 omniisaacgymenvs/tasks/utils/float64/map_values.pt
 omniisaacgymenvs/tasks/utils/float64/triangles.pt
 omniisaacgymenvs/tasks/utils/float64/vertices.pt
-omniisaacgymenvs/tasks/utils/terrain/heightmap_tensor.pt
-omniisaacgymenvs/tasks/utils/terrain/terrainTest.ply
-omniisaacgymenvs/tasks/utils/terrain/knn_terrain/map_indices.pt
-omniisaacgymenvs/tasks/utils/terrain/knn_terrain/map_values.pt
-omniisaacgymenvs/tasks/utils/terrain/knn_terrain/triangles.pt
-omniisaacgymenvs/tasks/utils/terrain/knn_terrain/vertices.pt
-omniisaacgymenvs/tasks/utils/terrain.ply
+omniisaacgymenvs/tasks/utils/terrain/*
 omniisaacgymenvs/tasks/utils/cameraBackup.py
 omniisaacgymenvs/tasks/utils/ray_castingbackup.py
 *.pt
@@ -26,3 +20,9 @@ omniisaacgymenvs/tasks/utils/backup/terrain/mesh_generator.py
 *.zip
 omniisaacgymenvs/test.py
 omniisaacgymenvs/view_results.py
+.vscode/*
+omniisaacgymenvs/tasks/utils/log/COLCON_IGNORE
+omniisaacgymenvs/tasks/utils/log/latest
+omniisaacgymenvs/tasks/utils/log/latest_mixin
+omniisaacgymenvs/tasks/utils/log/mixin_2023-01-31_20-28-48/logger_all.log
+omniisaacgymenvs/tasks/utils/log/mixin_2023-01-31_20-28-52/logger_all.log
