@@ -52,3 +52,11 @@ To train a policy, run:
 1. cd omniisaacgymenvs
 2. PYTHON_PATH train.py
 ```
+
+### Terrain generation
+
+Inside the folder terrain_generation you can find a blender project which can be used to create terrains for the simulation. Open the script section and execute the script to get a terrain with a different stone distribution.
+
+When a terrain has been generated, all big rocks are automatically selected, export this as the big_rock_layer that is needed for the collision detection inside the simulation. Then select the whole terrain (all stones and the base terrain) and export is as well. We import the files as ply in IsaacSim, if there are problems exporting into ply, export into fbx and then use a converter.
+
+Apart from the terrain there is also the stone_info file that you need to put into the terrain folder of the simulation. This is used for the spawn and goal validation.
