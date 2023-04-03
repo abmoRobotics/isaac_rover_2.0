@@ -1,0 +1,46 @@
+{
+    "RoverBaseController": {
+        "version": 1,
+        "description": "Controller for the rover base",
+        "language": "Python",
+        "metadata": {
+            "uiName": "Rover Base Controller"
+        },
+        "inputs": {
+            "lin_vel": {
+                "type": "double",
+                "description": "Linear velocity",
+                "default": 0,
+                "metadata": {
+                    "uiName": "Linear Velocity"
+                }
+            },
+            "ang_vel": {
+                "type": "double",
+                "description": "Angular velocity",
+                "default": 0,
+                "metadata": {
+                    "uiName": "Angular Velocity"
+                }
+            }
+        },
+        "outputs": {
+            "steer_command": {
+                "type": "double[]",
+                "description": "Steering angles for the boogie motors",
+                "metadata": {
+                    "uiName": "Steer Command"
+                },
+                "default": []
+            },
+            "velocity_command": {
+                "type": "double[]",
+                "description": "The angular velocity for the wheels",
+                "metadata": {
+                    "uiName": "Velocity Command"
+                },
+                "default": []
+            }
+        }
+    }
+}
