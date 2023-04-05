@@ -7,8 +7,8 @@ import omni.graph.core as og
 import omni.graph.core._omni_graph_core as _og
 import omni.graph.tools.ogn as ogn
 import traceback
-import numpy
 import sys
+import numpy
 class base_controllerDatabase(og.Database):
     """Helper class providing simplified access to data on nodes of type aau.rover.base_controller2.RoverBaseController
 
@@ -33,7 +33,7 @@ class base_controllerDatabase(og.Database):
     INTERFACE = og.Database._get_interface([
         ('inputs:ang_vel', 'double', 0, 'Angular Velocity', 'Angular velocity', {ogn.MetadataKeys.DEFAULT: '0'}, True, 0, False, ''),
         ('inputs:lin_vel', 'double', 0, 'Linear Velocity', 'Linear velocity', {ogn.MetadataKeys.DEFAULT: '0'}, True, 0, False, ''),
-        ('outputs:steer_command', 'double[]', 0, 'Steer CommandZ', 'Steering angles for the boogie motors', {ogn.MetadataKeys.DEFAULT: '[]'}, True, [], False, ''),
+        ('outputs:steer_command', 'double[]', 0, 'Steer Command', 'Steering angles for the boogie motors', {ogn.MetadataKeys.DEFAULT: '[]'}, True, [], False, ''),
         ('outputs:velocity_command', 'double[]', 0, 'Velocity Command', 'The angular velocity for the wheels', {ogn.MetadataKeys.DEFAULT: '[]'}, True, [], False, ''),
     ])
     class ValuesForInputs(og.DynamicAttributeAccess):
