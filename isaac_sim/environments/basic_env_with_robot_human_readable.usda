@@ -7,8 +7,8 @@
                 double radius = 5
             }
             dictionary Perspective = {
-                double3 position = (-0.4383081234542497, 0.7916599487859055, 7.831989681612072)
-                double3 target = (-0.5538616362053957, -1.0653435779244709, -3.832453208583283)
+                double3 position = (2.8808686863348574, -2.599546798816713, 4.492192737505122)
+                double3 target = (0.4536188466618287, 1.834818309396113, -2.3676869312473663)
             }
             dictionary Right = {
                 double3 position = (0, -5, 0)
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 343153
+            int "rtx:externalFrameCounter" = 57513
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -318,7 +318,7 @@ def Xform "World"
             )
             custom double outputs:time
             uniform token ui:nodegraph:node:expansionState = "open"
-            uniform float2 ui:nodegraph:node:pos = (-539.4215, -846.3733)
+            uniform float2 ui:nodegraph:node:pos = (-564.4066, -252.28415)
         }
 
         def OmniGraphNode "articulation_controller" (
@@ -447,7 +447,9 @@ def Xform "World"
         )
         {
             custom double inputs:ang_vel = 0
+            prepend double inputs:ang_vel.connect = </World/ActionGraph/break_3_vector.outputs:z>
             custom double inputs:lin_vel = -2
+            prepend double inputs:lin_vel.connect = </World/ActionGraph/break_3_vector_01.outputs:x>
             token node:type = "aau.rover.base_controller2.RoverBaseController"
             int node:typeVersion = 1
             custom double[] outputs:steer_command = []
@@ -620,6 +622,73 @@ def Xform "World"
             int node:typeVersion = 1
             uniform token ui:nodegraph:node:expansionState = "open"
             uniform float2 ui:nodegraph:node:pos = (978.4815, -302.5077)
+        }
+
+        def OmniGraphNode "ros2_context" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uchar inputs:domain_id = 5
+            custom bool inputs:useDomainIDEnvVar = 0
+            token node:type = "omni.isaac.ros2_bridge.ROS2Context"
+            int node:typeVersion = 2
+            custom uint64 outputs:context = 0
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-210.94318, 135.10802)
+        }
+
+        def OmniGraphNode "ros2_subscribe_twist" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </World/ActionGraph/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/ActionGraph/on_playback_tick.outputs:tick>
+            custom string inputs:nodeNamespace = ""
+            custom uint64 inputs:queueSize = 10
+            custom string inputs:topicName = "cmd_vel"
+            token node:type = "omni.isaac.ros2_bridge.ROS2SubscribeTwist"
+            int node:typeVersion = 1
+            custom vector3d outputs:angularVelocity = (0, 0, 0)
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom vector3d outputs:linearVelocity = (0, 0, 0)
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (59.59178, 43.93168)
+        }
+
+        def OmniGraphNode "break_3_vector" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:tuple
+            prepend token inputs:tuple.connect = </World/ActionGraph/ros2_subscribe_twist.outputs:angularVelocity>
+            token node:type = "omni.graph.nodes.BreakVector3"
+            int node:typeVersion = 1
+            custom token outputs:x
+            custom token outputs:y
+            custom token outputs:z
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (337.20355, -21.307081)
+        }
+
+        def OmniGraphNode "break_3_vector_01" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:tuple
+            prepend token inputs:tuple.connect = </World/ActionGraph/ros2_subscribe_twist.outputs:linearVelocity>
+            token node:type = "omni.graph.nodes.BreakVector3"
+            int node:typeVersion = 1
+            custom token outputs:x
+            custom token outputs:y
+            custom token outputs:z
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (353.86008, 195.23007)
         }
     }
 }

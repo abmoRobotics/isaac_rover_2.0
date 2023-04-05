@@ -77,24 +77,13 @@ class base_controller:
         
         try:
             # With the compute in a try block you can fail the compute by raising an exception
-            db.log_warn("Enter func")
+            #db.log_warn("Enter func")
             steering_angles, angular_velocity = Ackerman_drive(db.inputs.lin_vel, db.inputs.ang_vel)
-            db.log_warn(str(steering_angles))
-        except Exception as error:
-            # If anything causes your compute to fail report the error and return False
-            db.log_error(str(error))
-            return False
-        
-        try:
+            #db.log_warn(str(steering_angles))
             indexes = [0,1,4,5]
             steering_angles = list(map(lambda x: steering_angles[x], indexes))
+
             db.outputs.steer_command = numpy.array(steering_angles)
-        except Exception as error:
-            # If anything causes your compute to fail report the error and return False
-            db.log_error(str(error))
-            return False
-        
-        try:
             db.outputs.velocity_command = numpy.array(angular_velocity)
         except Exception as error:
             # If anything causes your compute to fail report the error and return False
