@@ -52,9 +52,10 @@ def Ackerman_drive(lin_vel, ang_vel):
         if lin_vel < 0:
             direction = -1 # backwards
 
+        sign = sign * (-1)
         index = 0
         for offset_pair in wheel_offsets:
-            radius = math.sqrt((turn_radius - offset_pair[0])**2 + (offset_pair[1])**2)
+            radius = math.sqrt((turn_radius * sign - offset_pair[0])**2 + (offset_pair[1])**2)
             wheel_vel = (math.pi * radius) / (2 * t)
             angular_velocity[index] = (wheel_vel / wheel_diameter) * direction
             index = index + 1
