@@ -1,0 +1,474 @@
+#usda 1.0
+(
+    customLayerData = {
+        dictionary cameraSettings = {
+            dictionary Front = {
+                double3 position = (5, 0, 0)
+                double radius = 5
+            }
+            dictionary Perspective = {
+                double3 position = (7.210194334296813, 7.210194334296813, 7.210194281543386)
+                double3 target = (-3.978038520813243e-8, -3.978038165541875e-8, 7.956076863990802e-8)
+            }
+            dictionary Right = {
+                double3 position = (0, -5, 0)
+                double radius = 5
+            }
+            dictionary Top = {
+                double3 position = (0, 0, 5)
+                double radius = 5
+            }
+            string boundCamera = "/OmniverseKit_Persp"
+        }
+        dictionary omni_layer = {
+            dictionary muteness = {
+            }
+        }
+        dictionary renderSettings = {
+            float3 "rtx:debugView:pixelDebug:textColor" = (0, 1e18, 0)
+            float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
+            float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
+            float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
+            int "rtx:externalFrameCounter" = 107843
+            float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
+            float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
+            float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
+            float3 "rtx:post:backgroundZeroAlpha:backgroundDefaultColor" = (0, 0, 0)
+            float3 "rtx:post:colorcorr:contrast" = (1, 1, 1)
+            float3 "rtx:post:colorcorr:gain" = (1, 1, 1)
+            float3 "rtx:post:colorcorr:gamma" = (1, 1, 1)
+            float3 "rtx:post:colorcorr:offset" = (0, 0, 0)
+            float3 "rtx:post:colorcorr:saturation" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:blackpoint" = (0, 0, 0)
+            float3 "rtx:post:colorgrad:contrast" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:gain" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:gamma" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:lift" = (0, 0, 0)
+            float3 "rtx:post:colorgrad:multiply" = (1, 1, 1)
+            float3 "rtx:post:colorgrad:offset" = (0, 0, 0)
+            float3 "rtx:post:colorgrad:whitepoint" = (1, 1, 1)
+            float3 "rtx:post:lensDistortion:lensFocalLengthArray" = (10, 30, 50)
+            float3 "rtx:post:lensFlares:anisoFlareFalloffX" = (450, 475, 500)
+            float3 "rtx:post:lensFlares:anisoFlareFalloffY" = (10, 10, 10)
+            float3 "rtx:post:lensFlares:cutoffPoint" = (2, 2, 2)
+            float3 "rtx:post:lensFlares:haloFlareFalloff" = (10, 10, 10)
+            float3 "rtx:post:lensFlares:haloFlareRadius" = (75, 75, 75)
+            float3 "rtx:post:lensFlares:isotropicFlareFalloff" = (50, 50, 50)
+            float3 "rtx:post:tonemap:whitepoint" = (1, 1, 1)
+            float3 "rtx:raytracing:inscattering:singleScatteringAlbedo" = (0.9, 0.9, 0.9)
+            float3 "rtx:raytracing:inscattering:transmittanceColor" = (0.5, 0.5, 0.5)
+            float3 "rtx:sceneDb:ambientLightColor" = (0.1, 0.1, 0.1)
+        }
+    }
+    defaultPrim = "World"
+    endTimeCode = 100
+    metersPerUnit = 1
+    startTimeCode = 0
+    timeCodesPerSecond = 24
+    upAxis = "Z"
+)
+
+over "Render" (
+    hide_in_stage_window = true
+)
+{
+}
+
+def Xform "World"
+{
+    def "carter_warehouse_apriltags_worker" (
+        instanceable = false
+        prepend payload = @omniverse://localhost/NVIDIA/Assets/Isaac/2022.2.1/Isaac/Samples/ROS2/Scenario/carter_warehouse_apriltags_worker.usd@
+    )
+    {
+        quatf xformOp:orient = (1, 0, 0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (3.0448702136029637, 0.25892748091139683, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        over "Carter_ROS"
+        {
+            quatd xformOp:orient = (6.123234262925839e-17, 0, 0, 1)
+            double3 xformOp:translate = (-2.999999761581421, -1, 0.25)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            over "ActionGraph"
+            {
+                over "scale_to_from_stage_units"
+                {
+                    custom token inputs:conversion (
+                        allowedTokens = ["Convert to stage units", "Convert to meters"]
+                    )
+                }
+
+                over "ros2_context"
+                {
+                    custom uchar inputs:domain_id = 1
+                }
+            }
+
+            over "ROS_Cameras"
+            {
+                over "viewport_id_camera_left"
+                {
+                    custom uint inputs:value = 1
+                }
+
+                over "viewport_id_camera_right"
+                {
+                    custom uint inputs:value = 2
+                }
+
+                over "enable_camera_right"
+                {
+                    custom bool inputs:condition = 1
+                }
+
+                over "ros2_context"
+                {
+                    custom uchar inputs:domain_id = 1
+                }
+            }
+
+            over "chassis_link"
+            {
+            }
+
+            over "left_wheel_link"
+            {
+            }
+
+            over "right_wheel_link"
+            {
+            }
+
+            over "rear_pivot_link"
+            {
+            }
+
+            over "com_offset"
+            {
+            }
+
+            over "imu"
+            {
+            }
+
+            over "rear_wheel_link"
+            {
+            }
+        }
+
+        def "Camera_Test" (
+            instanceable = false
+            prepend references = @omniverse://localhost/NVIDIA/Assets/Isaac/2022.2.1/Isaac/Samples/ROS2/Robots/Carter_ROS.usd@
+        )
+        {
+            quatd xformOp:orient = (6.123234262925839e-17, 0, 0, 1)
+            float3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0.4551064968109131, 0.7531601190567017, 0.25)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+            over "ActionGraph"
+            {
+                over "scale_to_from_stage_units"
+                {
+                    custom token inputs:conversion (
+                        allowedTokens = ["Convert to stage units", "Convert to meters"]
+                    )
+                }
+
+                over "ros2_context"
+                {
+                    custom uchar inputs:domain_id = 5
+                }
+            }
+
+            over "ROS_Cameras"
+            {
+                over "ros2_create_camera_right_info"
+                {
+                    custom token inputs:renderProductPath = ""
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_right_rgb"
+                {
+                    custom token inputs:renderProductPath = ""
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_right_depth"
+                {
+                    custom token inputs:renderProductPath = ""
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_left_info"
+                {
+                    custom token inputs:renderProductPath = ""
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_left_rgb"
+                {
+                    custom token inputs:renderProductPath = ""
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_left_depth"
+                {
+                    custom token inputs:renderProductPath = ""
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_context"
+                {
+                    custom uchar inputs:domain_id = 5
+                }
+
+                over "viewport_id_camera_left"
+                {
+                    custom uint inputs:value = 3
+                }
+
+                over "viewport_id_camera_right"
+                {
+                    custom uint inputs:value = 4
+                }
+
+                over "enable_camera_right"
+                {
+                    custom bool inputs:condition = 1
+                }
+            }
+
+            over "chassis_link"
+            {
+                over "chassis_obj"
+                {
+                    over "materials"
+                    {
+                        over "Looks"
+                        {
+                            over "main"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+
+                            over "cables"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            over "left_wheel_link"
+            {
+                over "side_wheel_obj"
+                {
+                    over "materials"
+                    {
+                        over "Looks"
+                        {
+                            over "main"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+
+                            over "cables"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            over "right_wheel_link"
+            {
+                over "side_wheel_obj"
+                {
+                    over "materials"
+                    {
+                        over "Looks"
+                        {
+                            over "main"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+
+                            over "cables"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            over "rear_pivot_link"
+            {
+                over "pivot_obj"
+                {
+                    over "materials"
+                    {
+                        over "Looks"
+                        {
+                            over "main"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+
+                            over "cables"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            over "rear_wheel_link"
+            {
+                over "caster_wheel_obj"
+                {
+                    over "materials"
+                    {
+                        over "Looks"
+                        {
+                            over "main"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+
+                            over "cables"
+                            {
+                                over "Shader"
+                                {
+                                    reorder properties = ["inputs:flip_tangent_u", "inputs:enable_opacity", "inputs:opacity_texture", "inputs:opacity_constant", "inputs:enable_opacity_texture", "inputs:opacity_mode", "inputs:opacity_threshold", "inputs:bump_factor", "inputs:normalmap_texture", "inputs:detail_bump_factor", "inputs:detail_normalmap_texture", "inputs:emissive_intensity", "inputs:flip_tangent_v", "inputs:project_uvw", "inputs:world_or_object", "inputs:uv_space_index", "inputs:texture_translate", "inputs:texture_rotate", "inputs:texture_scale", "inputs:detail_texture_translate", "inputs:detail_texture_rotate", "inputs:detail_texture_scale", "inputs:metallic_texture", "inputs:diffuse_texture", "inputs:albedo_desaturation", "inputs:albedo_add", "inputs:albedo_brightness", "inputs:diffuse_tint", "inputs:reflection_roughness_constant", "inputs:reflection_roughness_texture_influence", "inputs:reflectionroughness_texture", "inputs:metallic_constant", "inputs:metallic_texture_influence", "inputs:diffuse_color_constant", "inputs:specular_level", "inputs:enable_ORM_texture", "inputs:ORM_texture", "inputs:ao_to_diffuse", "inputs:ao_texture", "inputs:enable_emission", "inputs:emissive_color", "inputs:emissive_color_texture", "inputs:emissive_mask_texture"]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            over "com_offset"
+            {
+            }
+
+            over "imu"
+            {
+            }
+        }
+    }
+
+    def Xform "PaintTool"
+    {
+        def Xform "Scarlet_Oak_bbc77"
+        {
+            def PointInstancer "pointInstancer"
+            {
+                quath[] orientations = []
+                point3f[] positions = []
+                int[] protoIndices = []
+                prepend rel prototypes = </World/PaintTool/Scarlet_Oak_bbc77/pointInstancer/asset>
+                float3[] scales = []
+
+                def Xform "asset" (
+                    kind = "component"
+                    prepend references = @https://omniverse-content-production.s3.us-west-2.amazonaws.com/Assets/Vegetation/Trees/Scarlet_Oak.usd@
+                )
+                {
+                }
+            }
+        }
+
+        def Xform "Shumard_Oak_a354d"
+        {
+            def PointInstancer "pointInstancer"
+            {
+                quath[] orientations = []
+                point3f[] positions = []
+                int[] protoIndices = []
+                prepend rel prototypes = </World/PaintTool/Shumard_Oak_a354d/pointInstancer/asset>
+                float3[] scales = []
+
+                def Xform "asset" (
+                    kind = "component"
+                    prepend references = @https://omniverse-content-production.s3.us-west-2.amazonaws.com/Assets/Vegetation/Trees/Shumard_Oak.usd@
+                )
+                {
+                }
+            }
+        }
+    }
+}
+
+def Xform "Environment"
+{
+    quatd xformOp:orient = (1, 0, 0, 0)
+    double3 xformOp:scale = (1, 1, 1)
+    double3 xformOp:translate = (0, 0, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+    def DistantLight "defaultLight" (
+        prepend apiSchemas = ["ShapingAPI"]
+    )
+    {
+        float angle = 1
+        float intensity = 3000
+        float shaping:cone:angle = 180
+        float shaping:cone:softness
+        float shaping:focus
+        color3f shaping:focusTint
+        asset shaping:ies:file
+        quatd xformOp:orient = (0.6532814824381883, 0.2705980500730985, 0.27059805007309845, 0.6532814824381882)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+}
+
