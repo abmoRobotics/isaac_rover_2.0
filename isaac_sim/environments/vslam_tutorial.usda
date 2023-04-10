@@ -7,8 +7,8 @@
                 double radius = 5
             }
             dictionary Perspective = {
-                double3 position = (7.210194334296813, 7.210194334296813, 7.210194281543386)
-                double3 target = (-3.978038520813243e-8, -3.978038165541875e-8, 7.956076863990802e-8)
+                double3 position = (7.854560363205863, -2.30213702304604, 6.901712399775282)
+                double3 target = (-0.004118738485214379, -1.4951980362852693, -2.6255841213518982)
             }
             dictionary Right = {
                 double3 position = (0, -5, 0)
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 107843
+            int "rtx:externalFrameCounter" = 37695
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -128,6 +128,48 @@ def Xform "World"
                 {
                     custom uchar inputs:domain_id = 1
                 }
+
+                over "ros2_create_camera_right_info"
+                {
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_right_rgb"
+                {
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_right_depth"
+                {
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_left_info"
+                {
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_left_rgb"
+                {
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
+
+                over "ros2_create_camera_left_depth"
+                {
+                    custom token inputs:type (
+                        allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+                    )
+                }
             }
 
             over "chassis_link"
@@ -182,6 +224,11 @@ def Xform "World"
                 {
                     custom uchar inputs:domain_id = 5
                 }
+
+                over "differential_controller"
+                {
+                    uniform float2 ui:nodegraph:node:pos = (-671.5131, 697.512)
+                }
             }
 
             over "ROS_Cameras"
@@ -189,6 +236,7 @@ def Xform "World"
                 over "ros2_create_camera_right_info"
                 {
                     custom token inputs:renderProductPath = ""
+                    custom float2 inputs:stereoOffset = (-175.92, 0)
                     custom token inputs:type (
                         allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
                     )
@@ -208,6 +256,7 @@ def Xform "World"
                     custom token inputs:type (
                         allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
                     )
+                    uniform float2 ui:nodegraph:node:pos = (125.88601, -539.1667)
                 }
 
                 over "ros2_create_camera_left_info"
@@ -252,6 +301,11 @@ def Xform "World"
                 over "enable_camera_right"
                 {
                     custom bool inputs:condition = 1
+                }
+
+                over "enable_camera_right_rgb"
+                {
+                    uniform float2 ui:nodegraph:node:pos = (-713.6819, 860.07166)
                 }
             }
 
