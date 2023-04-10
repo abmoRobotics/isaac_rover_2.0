@@ -1,0 +1,67 @@
+mdl 1.6;
+
+import ::anno::*;
+import ::base::*;
+import ::df::*;
+import ::math::*;
+import ::state::*;
+import ::tex::*;
+
+//https://github.com/AprilRobotics/apriltag-imgs
+
+export material AprilTag(
+    uniform texture_2d tag_mosaic = texture_2d()
+    [[
+		anno::display_name("Mosaic texture"),
+		anno::description("Texture containing tags"),
+		anno::in_group("Tag")
+	]],
+    int tag_size = int(10)
+    [[
+		anno::display_name("Tag Size"),
+		anno::description("Tag size in pixels"),
+		anno::in_group("Tag")
+	]],
+    int tags_per_row = int(24)
+    [[
+		anno::display_name("Tags Per Row"),
+		anno::description("Number of tags per row in texture"),
+		anno::in_group("Tag")
+	]],
+    int spacing = int(1)
+    [[
+		anno::display_name("Spacing"),
+		anno::description("Spacing between tags in pixels"),
+		anno::in_group("Tag")
+	]],
+    int tag_id = int(0)
+    [[
+		anno::display_name("Tag ID"),
+		anno::description("Linear index of tag"),
+		anno::in_group("Tag")
+	]]
+) [[
+    anno::author("NVIDIA Corporation"),
+    anno::display_name("apriltag generator"),
+    anno::hidden(),
+    anno::description("Indexes a mosaic texture to generate apriltags based on ID, ")
+]] = let {
+    float3 tex_coord = state::texture_coordinate(0);
+    int2 tag_offset = int2(tag_id%tags_per_row  , tag_id/tags_per_row);
+} in material(
+    surface: material_surface(
+        scattering: df::diffuse_reflection_bsdf(
+            tint: color(
+				tex::texel_color(
+                tag_mosaic,
+				int2(
+						int(tex_coord.x * tag_size) + tag_offset.x *(tag_size + spacing), 
+						int(tex_coord.y * tag_size) + tags_per_row*(tag_size + spacing)  -tag_offset.y *(tag_size + spacing) 
+				)
+				)
+			)
+        )
+    )
+);
+
+

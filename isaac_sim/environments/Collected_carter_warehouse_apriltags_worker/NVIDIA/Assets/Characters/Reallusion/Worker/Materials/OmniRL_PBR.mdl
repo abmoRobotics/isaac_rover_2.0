@@ -1,0 +1,240 @@
+//* 3.5.0 - for CC3.5
+
+mdl 1.6;
+
+import ::anno::*;
+import ::base::*;
+import ::limits::*;
+import ::state::*;
+import ::tex::*;
+import ::math::*;
+
+import OmniRLBase::*;
+
+// naming ref OmniPBR
+export material OmniRLPbr(
+    // ------- BaseColor -------------
+    color diffuse_color_constant = color(1.0f)
+    [[
+        anno::display_name("Base Color"),
+        anno::description("This is the base color"),
+        anno::in_group("Albedo")
+    ]],
+    uniform texture_2d diffuse_texture = texture_2d()
+    [[
+        anno::display_name("Albedo Map"),
+        anno::in_group("Albedo")
+    ]],
+
+//    uniform float blend_map_strength = 1.0f
+//    [[
+//        anno::display_name("Blend Map Strength"),
+//        anno::in_group("Albedo"),
+//        anno::hard_range(0.0, 1.0)
+//    ]],
+//    uniform texture_2d blend_map = texture_2d()
+//    [[
+//        anno::display_name("Blend Map"),
+//        anno::in_group("Albedo")
+//    ]],
+
+    // ------- Roughness, Metallic -------------
+    float roughness_multiplier = 1.2f
+    [[
+        anno::display_name("Roughness Multiplier"),
+        anno::hard_range(0.0, 2.),
+        anno::description("Multiple with Roughness Map value"),
+        anno::in_group("Reflectivity")
+    ]],
+    uniform texture_2d reflectionroughness_texture = texture_2d()
+    [[
+        anno::display_name("Roughness Map"),
+        anno::in_group("Reflectivity")
+    ]],
+    
+    
+    float metallic_constant = 0.f
+    [[
+        anno::display_name("Metallic Amount"),
+        anno::hard_range(0.0,1.),
+        anno::description("Metallic Material"),
+        anno::in_group("Reflectivity")
+    ]], 
+    float metallic_texture_influence = 1.0f
+    [[
+        anno::display_name("Metallic Map Influence"),
+        anno::hard_range(0.0, 1.),
+        anno::description("Blends between the constant value and the lookup of the metallic texture"),
+        anno::in_group("Reflectivity")
+    ]],
+    uniform texture_2d metallic_texture = texture_2d()
+    [[
+        anno::display_name("Metallic Map"),
+        anno::in_group("Reflectivity")
+    ]], 
+    float specular_level = float(0.4)
+    [[
+        anno::display_name("Specular"),
+        anno::soft_range(float(0.0f), float(1.0f)),
+        anno::description("The specular level (intensity) of the material"),
+        anno::in_group("Reflectivity")
+    ]],
+    
+    // -------- AO ------------
+    uniform float ao_to_diffuse = float(0.0) [[
+        anno::display_name("AO to Diffuse"),
+        anno::description("Controls the amount of ambient occlusion multiplied into the diffuse color channel"),
+        anno::in_group("AO"),
+        anno::hard_range(0.0,1.)
+    ]],
+    uniform texture_2d ao_texture = texture_2d() [[
+        anno::display_name("Ambient Occlusion Map"),
+        anno::description("The Ambient Occlusion texture for the material"),
+        anno::in_group("AO")
+    ]],
+
+
+    // -------------------- EMISSIVE ----------------------
+
+    uniform texture_2d emissive_texture    = texture_2d()
+    [[
+        anno::display_name("Emissive map"),
+        anno::in_group("Emissive")
+    ]],
+
+    uniform color emissive_color    = color(1.0, 1.0, 1.0)
+    [[
+        anno::display_name("Emissive Color"),
+        anno::in_group("Emissive")
+    ]],
+
+    uniform float emissive_intensity = 1.f
+    [[
+        anno::display_name("Emissive Intensity"),    
+        anno::in_group("Emissive"),
+        anno::hard_range(0.0,10.0)
+    ]],
+
+
+
+    // -------------------- Normal ----------------------
+
+    uniform float bump_factor = 0.7f
+    [[
+        anno::display_name("Normal Map Strength"),
+        anno::description("Strength of normal map."),
+        anno::in_group("Normal")
+    ]],
+    
+    uniform texture_2d normalmap_texture = texture_2d()
+    [[
+        anno::display_name("Normal Map"),
+        anno::description("Enables the usage of the normalmap texture"),
+        anno::in_group("Normal")
+    ]], 
+
+	// -------------------- Opacity ----------------------
+	
+	uniform bool enable_opacity_cutout = true
+	[[
+		anno::display_name("Enable Opacity Cutout"),
+		anno::description("Enables the use of cutout opacity"),
+		anno::in_group("Opacity")
+	]],
+
+	uniform float opacity_threshold = float(0.2) [[
+        anno::display_name("Opacity Threshold"),
+        anno::in_group("Opacity"),
+        anno::hard_range(0.0f, 1.0f)
+    ]],
+
+	uniform texture_2d opacity_texture = texture_2d()
+	[[
+		anno::display_name("Opacity Map"),
+		anno::in_group("Opacity")
+	]],
+
+	uniform float opacity_multiplier = 1.f
+	[[
+		anno::display_name("Opacity Multiplier"),
+		anno::in_group("Opacity"),
+		anno::hard_range(0.0, 1.0)
+	]]
+	
+
+) [[  
+    anno::display_name("OmniRL PBR"),
+    anno::version(3, 4, 1, ""),
+    anno::modified(2021, 03, 24, "")
+]] = let {
+
+	float2 UV0 = float2(state::texture_coordinate(0).x, state::texture_coordinate(0).y);
+
+    // Normal calculations, RL flip G
+    float3 map_normal =  tex::texture_isvalid(normalmap_texture) ?
+                ( tex::lookup_float3(normalmap_texture,UV0,tex::wrap_repeat,tex::wrap_repeat) * float3(2,-2,2) - float3(1,-1,1) )
+                            : float3( 0, 0, 1 ) ;
+
+    float3 tangent_space_normal = math::lerp( float3(0, 0, 1), map_normal, bump_factor ); // normal map strength
+
+    //Base
+    float3 base_color_ = tex::texture_isvalid(diffuse_texture) ? 
+        tex::lookup_float3(diffuse_texture,UV0,tex::wrap_repeat,tex::wrap_repeat) :
+        float3(diffuse_color_constant);
+
+	//float3 blend_color_ = tex::texture_isvalid(blend_map) ? 
+    //    tex::lookup_float3(blend_map,UV0,tex::wrap_repeat,tex::wrap_repeat) :
+    //    float3(1,1,1); 
+        
+	float blend_ao = math::lerp( 1,
+         ( tex::texture_isvalid(ao_texture) ? tex::lookup_float(ao_texture,UV0,tex::wrap_repeat,tex::wrap_repeat) : 1 ),
+         ao_to_diffuse );
+         
+    //float3 base_blend_color = math::lerp( base_color_, base_color_*blend_color_, blend_map_strength);
+    
+	float3 final_base_color = base_color_ * blend_ao; //base_blend_color * float3(blend_ao);
+
+	float opacity_color = opacity_multiplier *
+							( tex::texture_isvalid(opacity_texture) ? 
+						tex::lookup_float(opacity_texture,UV0,tex::wrap_repeat,tex::wrap_repeat) :
+						opacity_multiplier);
+
+	
+
+    //Roughness
+    float rough_color_ = tex::texture_isvalid(reflectionroughness_texture) ? 
+        tex::lookup_float(reflectionroughness_texture,UV0,tex::wrap_repeat,tex::wrap_repeat) :
+        1;
+
+    //Metallic
+    float3 metal_color_ = tex::texture_isvalid(metallic_texture) ? 
+        tex::lookup_float3(metallic_texture,UV0,tex::wrap_repeat,tex::wrap_repeat) * float3(metallic_texture_influence):
+        float3(metallic_constant);
+
+    //Emissive
+    float3 emissive_map_color = tex::texture_isvalid(emissive_texture) ? 
+        tex::lookup_float3(emissive_texture,UV0,tex::wrap_repeat,tex::wrap_repeat) :
+        float3(0,0,0);
+	float3 emissive_color_ = float3( emissive_color ) * emissive_map_color * base_color_;
+	// opacity_threshold
+	
+	float local_cutout_opacity = enable_opacity_cutout ? ((opacity_color >= opacity_threshold) ? 1.0 : 0) : opacity_color;
+
+} in
+    OmniRLBase::OmniRLBase(
+
+	base_color : final_base_color,
+	normal : tangent_space_normal,
+	metallic : metal_color_.x,
+	roughness : rough_color_ * roughness_multiplier,
+	specular: specular_level,
+	emissive_color : emissive_color_,
+	opacity: local_cutout_opacity
+    );
+	
+	
+	
+	
+	
+	
+	

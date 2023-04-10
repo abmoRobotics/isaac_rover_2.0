@@ -1,0 +1,180 @@
+/***************************************************************************************************
+ * Copyright 2020 NVIDIA Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  * Neither the name of NVIDIA CORPORATION nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **************************************************************************************************/
+ 
+//* 1.0.0 - first version
+//* 1.0.1 - merge unlit template
+//* 1.0.2 - Fix EDF in the back side: the EDF contained in surface is only used for the front side and not for the back side
+//* 1.0.3 - UE4 normal mapping: Geometry normal shouldn't be changed
+//* 1.0.4 - using absolute import paths when importing standard modules
+
+//* 3.5.0 - for CC3.5
+
+mdl 1.6;
+
+import ::df::*;
+import ::state::*;
+import ::math::*;
+import ::tex::*;
+import ::anno::*;
+
+// ref OmniUe4Base.mdl
+float emissive_multiplier()
+[[
+    anno::noinline()
+]]
+{
+    return 20.0f * 128.0f;
+}
+
+// ref OmniUe4Base.mdl
+float3 tangent_space_normal(
+    float3 normal = float3(0.0,0.0,1.0),
+    float3 tangent_u = state::texture_tangent_u(0),
+    float3 tangent_v = state::texture_tangent_v(0)
+)
+[[
+    anno::noinline()
+]]
+{
+    return math::normalize(
+        tangent_u * normal.x - /* flip_tangent_v */
+        tangent_v * normal.y +
+        state::normal() * (normal.z));
+}
+
+// ref OmniUe4Base.mdl
+export material OmniRLBase(
+   float3 base_color = float3(0.0, 0.0, 0.0) [[ 
+        anno::display_name("base_color"),
+        anno::soft_range(0.0f, 1.0f)
+    ]],
+
+   float metallic = 0.0 [[ 
+        anno::display_name("metallic"),
+        anno::hard_range(0.0f, 1.0f)
+    ]],
+   float roughness = 0.5 [[ 
+        anno::display_name("roughness"),
+        anno::hard_range(0.0f, 1.0f)
+    ]],
+   float specular = 0.5 [[ 
+        anno::display_name("specular"),
+        anno::hard_range(0.0f, 1.0f)
+    ]],
+
+   float3 normal = float3(0.0,0.0,1.0),
+
+   uniform bool enable_opacity = false,
+
+   float opacity = 1.0 [[ 
+        anno::display_name("opacity"),
+        anno::hard_range(0.0f, 1.0f)
+    ]],
+   float3 emissive_color = float3(0.0, 0.0, 0.0),
+
+   float3 displacement = float3(0.0) [[ 
+        anno::display_name("displacement"),
+        anno::soft_range(0.0f, 1.0f)
+    ]],
+
+   uniform bool two_sided = false
+) [[  
+    anno::version(3, 5, 0, ""),
+    anno::modified(2021, 02, 23, "")
+]] = let {     
+   color final_base_color = base_color;
+   float final_metallic = math::saturate(metallic);
+   float final_roughness = math::saturate(roughness);
+   float final_specular = math::saturate(specular);
+   color final_emissive_color = math::max(emissive_color, 0.0f) * emissive_multiplier(); /* ref OmniUe4Base */
+   float3 final_normal = math::normalize(normal);
+
+
+   // - compute final roughness by squaring the "roughness" parameter
+   float alpha = final_roughness * final_roughness;
+   // reduce the reflectivity at grazing angles to avoid "dark edges" for high roughness due to the layering
+   float grazing_refl = math::max((1.0 - final_roughness), 0.0);
+
+	float3 the_normal = tangent_space_normal(
+                            normal:         final_normal,
+                            tangent_u:      state::texture_tangent_u(0),
+                            tangent_v:      state::texture_tangent_v(0)
+                            );
+
+   // for the dielectric component we layer the glossy component on top of the diffuse one,
+   // the glossy layer has no color tint
+       
+   bsdf dielectric_component = df::custom_curve_layer(
+       weight: final_specular,
+       normal_reflectivity: 0.08,
+       grazing_reflectivity: grazing_refl,
+       layer: df::microfacet_ggx_smith_bsdf(roughness_u: alpha),
+       base: df::diffuse_reflection_bsdf(tint: final_base_color),
+       normal: the_normal);
+
+   // the metallic component doesn't have a diffuse component, it's only glossy
+   // base_color is applied to tint it
+   bsdf metallic_component = df::microfacet_ggx_smith_bsdf(tint: final_base_color, roughness_u: alpha);
+
+   // final BSDF is a linear blend between dielectric and metallic component
+   bsdf dielectric_metal_mix =
+       df::normalized_mix(
+           components:
+               df::bsdf_component[](
+                   df::bsdf_component(
+                       component: metallic_component,
+                       weight: final_metallic),
+                   df::bsdf_component(
+                       component: dielectric_component,
+                       weight: 1.0-final_metallic)
+               )
+       );
+} 
+in material(
+   thin_walled: two_sided, // Graphene?
+   surface: material_surface(
+       scattering: dielectric_metal_mix,
+       emission:
+            material_emission (
+                emission:  df::diffuse_edf (),
+                intensity: final_emissive_color
+                )
+       ),
+   backface: material_surface(
+       emission:
+            material_emission (
+                emission:  df::diffuse_edf (),
+                intensity: final_emissive_color
+                )
+       ),
+   geometry: material_geometry(
+       displacement: displacement,
+       normal: the_normal,
+       cutout_opacity: opacity
+   )
+);
