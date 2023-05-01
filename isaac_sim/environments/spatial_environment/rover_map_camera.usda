@@ -7,8 +7,8 @@
                 double radius = 500
             }
             dictionary Perspective = {
-                double3 position = (57.84311261396083, 120.53399130093466, 12.085334470577223)
-                double3 target = (54.36519920840611, 120.44944695502312, 11.98702540871627)
+                double3 position = (66.25652435766568, 108.16510668459118, 14.98643668727383)
+                double3 target = (60.257116127657525, 122.37385068571116, 11.611340667921937)
             }
             dictionary Right = {
                 double3 position = (0, -50000, -1.1102230246251565e-11)
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 405808
+            int "rtx:externalFrameCounter" = 851153
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -3739,11 +3739,11 @@ def Xform "terrain"
                 float focalLength = 2.4
                 float focusDistance = 4
                 float horizontalAperture = 2.0955
-                custom uniform vector3d omni:kit:centerOfInterest = (0, 0, -231.38734237494987)
+                custom uniform vector3d omni:kit:centerOfInterest = (0, 0, -2665.245880017318)
                 float verticalAperture = 1.17955
-                quatd xformOp:orient = (0.009804875443556474, -0.012307372819493812, 0.7077090405279642, 0.7063287527396904)
+                quatd xformOp:orient = (-0.009804875443556349, 0.012307372819493933, -0.7077090405279641, -0.7063287527396905)
                 double3 xformOp:scale = (1, 1, 1)
-                double3 xformOp:translate = (0.10000000149011612, -0.4000000059604645, 0.10000000149011612)
+                double3 xformOp:translate = (0.05, -0.4, 0.1)
                 uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
             }
 
@@ -4537,6 +4537,407 @@ def Xform "terrain"
             int node:typeVersion = 1
             uniform token ui:nodegraph:node:expansionState = "open"
             uniform float2 ui:nodegraph:node:pos = (1239.1051, -103.27657)
+        }
+    }
+
+    def OmniGraph "ActionGraph"
+    {
+        token evaluationMode = "Automatic"
+        token evaluator:type = "execution"
+        token fabricCacheBacking = "Shared"
+        int2 fileFormatVersion = (1, 5)
+        token pipelineStage = "pipelineStageSimulation"
+
+        def OmniGraphNode "constant_string" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom string inputs:value = ""
+            token node:type = "omni.graph.nodes.ConstantString"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-1988.2461, 325.8337)
+        }
+
+        def OmniGraphNode "on_playback_tick" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            token node:type = "omni.graph.action.OnPlaybackTick"
+            int node:typeVersion = 1
+            custom double outputs:deltaSeconds
+            custom double outputs:frame
+            custom uint outputs:tick (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom double outputs:time
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-1978.327, 428.16995)
+        }
+
+        def OmniGraphNode "ros2_context" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uchar inputs:domain_id = 5
+            custom bool inputs:useDomainIDEnvVar = 0
+            token node:type = "omni.isaac.ros2_bridge.ROS2Context"
+            int node:typeVersion = 2
+            custom uint64 outputs:context = 0
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-1970.6565, 597.13617)
+        }
+
+        def OmniGraphNode "ros2_subscribe_twist" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </terrain/ActionGraph/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            custom string inputs:nodeNamespace = ""
+            prepend string inputs:nodeNamespace.connect = </terrain/ActionGraph/constant_string.inputs:value>
+            custom uint64 inputs:queueSize = 10
+            custom string inputs:topicName = "cmd_vel"
+            token node:type = "omni.isaac.ros2_bridge.ROS2SubscribeTwist"
+            int node:typeVersion = 1
+            custom vector3d outputs:angularVelocity = (0, 0, 0)
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom vector3d outputs:linearVelocity = (0, 0, 0)
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-1654.7101, 940.5475)
+        }
+
+        def OmniGraphNode "scale_to_from_stage_units" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:conversion = "Convert to stage units" (
+                allowedTokens = ["Convert to stage units", "Convert to meters"]
+            )
+            custom token inputs:value
+            prepend token inputs:value.connect = </terrain/ActionGraph/ros2_subscribe_twist.outputs:linearVelocity>
+            token node:type = "omni.isaac.core_nodes.OgnIsaacScaleToFromStageUnit"
+            int node:typeVersion = 1
+            custom token outputs:result
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-1354.0027, 1195.3961)
+        }
+
+        def OmniGraphNode "differential_controller" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom double inputs:angularVelocity = 0
+            prepend double inputs:angularVelocity.connect = </terrain/ActionGraph/break_3_vector.outputs:z>
+            custom uint inputs:execIn
+            delete uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/ros2_subscribe_twist.outputs:execOut>
+            custom double inputs:linearVelocity = 0
+            prepend double inputs:linearVelocity.connect = </terrain/ActionGraph/break_3_vector_02.outputs:x>
+            custom double inputs:maxAngularSpeed = 0
+            custom double inputs:maxLinearSpeed = 0
+            custom double inputs:maxWheelSpeed = 0
+            custom double inputs:wheelDistance = 0
+            custom double inputs:wheelRadius = 0
+            token node:type = "omni.isaac.wheeled_robots.DifferentialController"
+            int node:typeVersion = 1
+            custom double[] outputs:effortCommand
+            custom double[] outputs:positionCommand
+            custom double[] outputs:velocityCommand
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-954.1543, 993.6921)
+        }
+
+        def OmniGraphNode "articulation_controller" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom double[] inputs:effortCommand = []
+            prepend double[] inputs:effortCommand.connect = </terrain/ActionGraph/differential_controller.outputs:effortCommand>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            custom int[] inputs:jointIndices = []
+            custom token[] inputs:jointNames = []
+            prepend token[] inputs:jointNames.connect = </terrain/ActionGraph/make_array.outputs:array>
+            custom double[] inputs:positionCommand = []
+            prepend double[] inputs:positionCommand.connect = </terrain/ActionGraph/differential_controller.outputs:positionCommand>
+            custom string inputs:robotPath = ""
+            custom rel inputs:targetPrim
+            custom bool inputs:usePath = 1
+            custom double[] inputs:velocityCommand = []
+            prepend double[] inputs:velocityCommand.connect = </terrain/ActionGraph/differential_controller.outputs:velocityCommand>
+            token node:type = "omni.isaac.core_nodes.IsaacArticulationController"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (20.975067, 1035.321)
+        }
+
+        def OmniGraphNode "isaac_read_imu_node" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            custom rel inputs:imuPrim
+            token node:type = "omni.isaac.sensor.IsaacReadIMU"
+            int node:typeVersion = 1
+            custom vector3d outputs:angVel = (0, 0, 0)
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom vector3d outputs:linAcc = (0, 0, 0)
+            custom quatd outputs:orientation = (1, 0, 0, 0)
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-944.97363, 682.8275)
+        }
+
+        def OmniGraphNode "ros2_publish_imu" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom vector3d inputs:angularVelocity = (0, 0, 0)
+            prepend vector3d inputs:angularVelocity.connect = </terrain/ActionGraph/isaac_read_imu_node.outputs:angVel>
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </terrain/ActionGraph/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/isaac_read_imu_node.outputs:execOut>
+            custom string inputs:frameId = "sim_imu"
+            custom vector3d inputs:linearAcceleration = (0, 0, 0)
+            prepend vector3d inputs:linearAcceleration.connect = </terrain/ActionGraph/isaac_read_imu_node.outputs:linAcc>
+            custom string inputs:nodeNamespace = ""
+            prepend string inputs:nodeNamespace.connect = </terrain/ActionGraph/constant_string.inputs:value>
+            custom quatd inputs:orientation = (1, 0, 0, 0)
+            prepend quatd inputs:orientation.connect = </terrain/ActionGraph/isaac_read_imu_node.outputs:orientation>
+            custom bool inputs:publishAngularVelocity = 1
+            custom bool inputs:publishLinearAcceleration = 1
+            custom bool inputs:publishOrientation = 1
+            custom uint64 inputs:queueSize = 10
+            custom double inputs:timeStamp = 0
+            prepend double inputs:timeStamp.connect = </terrain/ActionGraph/isaac_read_simulation_time.outputs:simulationTime>
+            custom string inputs:topicName = "imu"
+            token node:type = "omni.isaac.ros2_bridge.ROS2PublishImu"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-8.860117, 670.0121)
+        }
+
+        def OmniGraphNode "isaac_compute_odometry_node" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom rel inputs:chassisPrim
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            token node:type = "omni.isaac.core_nodes.IsaacComputeOdometry"
+            int node:typeVersion = 1
+            custom vector3d outputs:angularAcceleration = (0, 0, 0)
+            custom vector3d outputs:angularVelocity = (0, 0, 0)
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom vector3d outputs:linearAcceleration = (0, 0, 0)
+            custom vector3d outputs:linearVelocity = (0, 0, 0)
+            custom quatd outputs:orientation = (1, 0, 0, 0)
+            custom vector3d outputs:position = (0, 0, 0)
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-947.4016, -225.86229)
+        }
+
+        def OmniGraphNode "ros2_publish_odometry" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom vector3d inputs:angularVelocity = (0, 0, 0)
+            prepend vector3d inputs:angularVelocity.connect = </terrain/ActionGraph/isaac_compute_odometry_node.outputs:angularVelocity>
+            custom string inputs:chassisFrameId = "base_link"
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </terrain/ActionGraph/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            custom vector3d inputs:linearVelocity = (0, 0, 0)
+            delete vector3d inputs:linearVelocity.connect = </terrain/ActionGraph/isaac_compute_odometry_node.outputs:linearAcceleration>
+            prepend vector3d inputs:linearVelocity.connect = </terrain/ActionGraph/isaac_compute_odometry_node.outputs:linearVelocity>
+            custom string inputs:nodeNamespace = ""
+            prepend string inputs:nodeNamespace.connect = </terrain/ActionGraph/constant_string.inputs:value>
+            custom string inputs:odomFrameId = "odom"
+            custom quatd inputs:orientation = (1, 0, 0, 0)
+            prepend quatd inputs:orientation.connect = </terrain/ActionGraph/isaac_compute_odometry_node.outputs:orientation>
+            custom vector3d inputs:position = (0, 0, 0)
+            prepend vector3d inputs:position.connect = </terrain/ActionGraph/isaac_compute_odometry_node.outputs:position>
+            custom uint64 inputs:queueSize = 10
+            custom vector3d inputs:robotFront = (1, 0, 0)
+            custom double inputs:timeStamp = 0
+            prepend double inputs:timeStamp.connect = </terrain/ActionGraph/isaac_read_simulation_time.outputs:simulationTime>
+            custom string inputs:topicName = "odom"
+            token node:type = "omni.isaac.ros2_bridge.ROS2PublishOdometry"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-32.64595, -244.47018)
+        }
+
+        def OmniGraphNode "isaac_read_simulation_time" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom bool inputs:resetOnStop = 0
+            custom int64 inputs:swhFrameNumber = 0
+            token node:type = "omni.isaac.core_nodes.IsaacReadSimulationTime"
+            int node:typeVersion = 1
+            custom double outputs:simulationTime
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-959.4941, 291.30884)
+        }
+
+        def OmniGraphNode "ros2_publish_transform_tree" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </terrain/ActionGraph/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            custom string inputs:nodeNamespace = ""
+            prepend string inputs:nodeNamespace.connect = </terrain/ActionGraph/constant_string.inputs:value>
+            custom rel inputs:parentPrim
+            custom uint64 inputs:queueSize = 10
+            custom rel inputs:targetPrims
+            custom double inputs:timeStamp = 0
+            prepend double inputs:timeStamp.connect = </terrain/ActionGraph/isaac_read_simulation_time.outputs:simulationTime>
+            custom string inputs:topicName = "tf"
+            token node:type = "omni.isaac.ros2_bridge.ROS2PublishTransformTree"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-37.047703, 404.86237)
+        }
+
+        def OmniGraphNode "ros2_publish_raw_transform_tree" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom string inputs:childFrameId = "base_link"
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </terrain/ActionGraph/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            custom string inputs:nodeNamespace = ""
+            prepend string inputs:nodeNamespace.connect = </terrain/ActionGraph/constant_string.inputs:value>
+            custom string inputs:parentFrameId = "odom"
+            custom uint64 inputs:queueSize = 10
+            custom quatd inputs:rotation = (1, 0, 0, 0)
+            prepend quatd inputs:rotation.connect = </terrain/ActionGraph/isaac_compute_odometry_node.outputs:orientation>
+            custom double inputs:timeStamp = 0
+            prepend double inputs:timeStamp.connect = </terrain/ActionGraph/isaac_read_simulation_time.outputs:simulationTime>
+            custom string inputs:topicName = "tf"
+            custom vector3d inputs:translation = (0, 0, 0)
+            prepend vector3d inputs:translation.connect = </terrain/ActionGraph/isaac_compute_odometry_node.outputs:position>
+            token node:type = "omni.isaac.ros2_bridge.ROS2PublishRawTransformTree"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-52.78248, 121.79357)
+        }
+
+        def OmniGraphNode "break_3_vector_02" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:tuple
+            prepend token inputs:tuple.connect = </terrain/ActionGraph/scale_to_from_stage_units.outputs:result>
+            token node:type = "omni.graph.nodes.BreakVector3"
+            int node:typeVersion = 1
+            custom token outputs:x
+            custom token outputs:y
+            custom token outputs:z
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-1142.8158, 1362.1868)
+        }
+
+        def OmniGraphNode "break_3_vector" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:tuple
+            prepend token inputs:tuple.connect = </terrain/ActionGraph/ros2_subscribe_twist.outputs:angularVelocity>
+            token node:type = "omni.graph.nodes.BreakVector3"
+            int node:typeVersion = 1
+            custom token outputs:x
+            custom token outputs:y
+            custom token outputs:z
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-1324.4692, 815.7343)
+        }
+
+        def OmniGraphNode "make_array" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom int inputs:arraySize = 0
+            custom token inputs:arrayType = "auto" (
+                allowedTokens = ["auto", "bool[]", "double[]", "float[]", "half[]", "int[]", "int64[]", "token[]", "uchar[]", "uint[]", "uint64[]", "double[2][]", "double[3][]", "double[4][]", "matrixd[3][]", "matrixd[4][]", "float[2][]", "float[3][]", "float[4][]", "half[2][]", "half[3][]", "half[4][]", "int[2][]", "int[3][]", "int[4][]"]
+            )
+            custom token inputs:input0
+            delete token inputs:input0.connect = </terrain/ActionGraph/constant_token_01.inputs:value>
+            prepend token inputs:input0.connect = </terrain/ActionGraph/constant_token_01.inputs:value>
+            custom token inputs:input1 (
+                customData = {
+                    string ExtendedAttributeType = "Any"
+                    dictionary omni = {
+                        dictionary graph = {
+                            string attrType = "Any"
+                        }
+                    }
+                }
+            )
+            delete token inputs:input1.connect = </terrain/ActionGraph/constant_token.inputs:value>
+            prepend token inputs:input1.connect = </terrain/ActionGraph/constant_token.inputs:value>
+            custom token inputs:input2 (
+                customData = {
+                    string ExtendedAttributeType = "Any"
+                    dictionary omni = {
+                        dictionary graph = {
+                            string attrType = "Any"
+                        }
+                    }
+                }
+            )
+            token node:type = "omni.graph.nodes.ConstructArray"
+            int node:typeVersion = 1
+            custom token outputs:array
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-357.74432, 1502.7981)
+        }
+
+        def OmniGraphNode "constant_token" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:value
+            token node:type = "omni.graph.nodes.ConstantToken"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-919.3031, 1603.0012)
+        }
+
+        def OmniGraphNode "constant_token_01" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:value
+            token node:type = "omni.graph.nodes.ConstantToken"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-875.5565, 1761.4346)
         }
     }
 }
