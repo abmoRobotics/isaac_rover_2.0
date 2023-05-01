@@ -8,7 +8,7 @@
             }
             dictionary Perspective = {
                 double3 position = (66.25652435766568, 108.16510668459118, 14.98643668727383)
-                double3 target = (60.257116127657525, 122.37385068571116, 11.611340667921937)
+                double3 target = (60.25711707366188, 122.3738510851459, 11.611340667921937)
             }
             dictionary Right = {
                 double3 position = (0, -50000, -1.1102230246251565e-11)
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 851153
+            int "rtx:externalFrameCounter" = 28170
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -4811,8 +4811,14 @@ def Xform "terrain"
             custom string inputs:nodeNamespace = ""
             prepend string inputs:nodeNamespace.connect = </terrain/ActionGraph/constant_string.inputs:value>
             custom rel inputs:parentPrim
+            prepend rel inputs:parentPrim = </terrain/Mars_Rover/base_link>
             custom uint64 inputs:queueSize = 10
             custom rel inputs:targetPrims
+            delete rel inputs:targetPrims = [
+                </terrain/Mars_Rover/base_link/camera_left>,
+                </terrain/Mars_Rover/base_link/camera_right>,
+            ]
+            prepend rel inputs:targetPrims = </terrain/Mars_Rover>
             custom double inputs:timeStamp = 0
             prepend double inputs:timeStamp.connect = </terrain/ActionGraph/isaac_read_simulation_time.outputs:simulationTime>
             custom string inputs:topicName = "tf"
@@ -4938,6 +4944,33 @@ def Xform "terrain"
             int node:typeVersion = 1
             uniform token ui:nodegraph:node:expansionState = "open"
             uniform float2 ui:nodegraph:node:pos = (-875.5565, 1761.4346)
+        }
+
+        def OmniGraphNode "ros2_publish_transform_tree_01" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </terrain/ActionGraph/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/ActionGraph/on_playback_tick.outputs:tick>
+            custom string inputs:nodeNamespace = ""
+            prepend string inputs:nodeNamespace.connect = </terrain/ActionGraph/constant_string.inputs:value>
+            custom rel inputs:parentPrim
+            prepend rel inputs:parentPrim = </terrain/Mars_Rover/base_link>
+            custom uint64 inputs:queueSize = 10
+            custom rel inputs:targetPrims
+            prepend rel inputs:targetPrims = [
+                </terrain/Mars_Rover/base_link/camera_left>,
+                </terrain/Mars_Rover/base_link/camera_right>,
+            ]
+            custom double inputs:timeStamp = 0
+            prepend double inputs:timeStamp.connect = </terrain/ActionGraph/isaac_read_simulation_time.outputs:simulationTime>
+            custom string inputs:topicName = "tf"
+            token node:type = "omni.isaac.ros2_bridge.ROS2PublishTransformTree"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (300.42596, 407.73105)
         }
     }
 }
