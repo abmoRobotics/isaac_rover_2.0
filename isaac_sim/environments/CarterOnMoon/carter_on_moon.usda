@@ -7,8 +7,8 @@
                 double radius = 5
             }
             dictionary Perspective = {
-                double3 position = (138.93044585015755, 145.508555340549, 212.7429938575623)
-                double3 target = (140.55868964680306, 142.79147616423313, 211.29548417505544)
+                double3 position = (127.88503917160932, 143.83104228044914, 216.68667288727985)
+                double3 target = (136.00699862418816, 140.5167949414792, 212.44004709200476)
             }
             dictionary Right = {
                 double3 position = (0, -5, 0)
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 147237
+            int "rtx:externalFrameCounter" = 61845
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -3913,6 +3913,7 @@ def Xform "World"
 
             over "isaac_create_viewport_left"
             {
+                custom token inputs:name = "LeftCamViewport"
                 uniform float2 ui:nodegraph:node:pos = (-2045.752, -291.59814)
             }
 
@@ -3928,6 +3929,7 @@ def Xform "World"
 
             over "isaac_create_viewport_right"
             {
+                custom token inputs:name = "RightCamViewport"
                 uniform float2 ui:nodegraph:node:pos = (-2026.7087, 367.793)
             }
 
@@ -3999,18 +4001,6 @@ def Xform "World"
                 prepend rel physics:body1 = </World/Carter_ROS/imu>
                 point3f physics:localPos1 = (9.604122e-9, 7.128734e-8, 3.8122838e-11)
                 quatf physics:localRot1 = (1, -1.6681358e-14, -4.9272853e-11, 8.454552e-15)
-            }
-
-            over "camera_mount"
-            {
-                over "carter_camera_stereo_right"
-                {
-                    custom uniform vector3d omni:kit:centerOfInterest = (0, 0, -4.375420669254414)
-                    float3 xformOp:rotateZYX = (90, -90, 0)
-                    float3 xformOp:scale = (1, 1, 1)
-                    float3 xformOp:translate = (-4.4486847, 0.00013639762, 0.08431392)
-                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZYX", "xformOp:scale"]
-                }
             }
         }
 
