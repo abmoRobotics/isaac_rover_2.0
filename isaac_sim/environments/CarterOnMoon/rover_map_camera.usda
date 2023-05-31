@@ -7,8 +7,8 @@
                 double radius = 500
             }
             dictionary Perspective = {
-                double3 position = (55.936531076535104, 124.71604699566679, 14.099451065168049)
-                double3 target = (54.93661955622562, 126.17713698234239, 13.258149398323587)
+                double3 position = (54.42629761905807, 115.08592700764578, 19.19165424888155)
+                double3 target = (56.2494315555614, 121.69241674631523, 11.370632687575196)
             }
             dictionary Right = {
                 double3 position = (0, -50000, -1.1102230246251565e-11)
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 415216
+            int "rtx:externalFrameCounter" = 378811
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -3704,9 +3704,9 @@ def Xform "terrain"
         prepend payload = @../../../host_share/Mars Rover/1. USD/1. Rover/Mars_Rover.usd@
     )
     {
-        quatd xformOp:orient = (0.7071067690849304, 0, 0, 0.7071067690849304)
+        quatd xformOp:orient = (0.7071067811865476, 0, 0, 0.7071067811865475)
         double3 xformOp:scale = (1, 1, 1)
-        double3 xformOp:translate = (56.21331024169922, 120.54154968261719, 11.90000057220459)
+        double3 xformOp:translate = (56.21331087290545, 120.54154666231375, 11.503648293692333)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
 
         over "Differential"
@@ -4764,7 +4764,7 @@ def Xform "terrain"
             )
             custom double outputs:time
             uniform token ui:nodegraph:node:expansionState = "open"
-            uniform float2 ui:nodegraph:node:pos = (-527.0877, -250.8488)
+            uniform float2 ui:nodegraph:node:pos = (-564.4066, -252.28415)
         }
 
         def OmniGraphNode "articulation_controller" (
@@ -4773,21 +4773,33 @@ def Xform "terrain"
         {
             custom double[] inputs:effortCommand = []
             custom uint inputs:execIn
-            prepend uint inputs:execIn.connect = </terrain/RoverController/on_playback_tick.outputs:tick>
+            prepend uint inputs:execIn.connect = [
+                </World/ActionGraph/on_playback_tick.outputs:tick>,
+                </terrain/RoverController/ros2_subscribe_twist.outputs:execOut>,
+            ]
             custom int[] inputs:jointIndices = []
             custom token[] inputs:jointNames = []
-            prepend token[] inputs:jointNames.connect = </terrain/RoverController/make_array.outputs:array>
+            delete token[] inputs:jointNames.connect = </terrain/RoverController/make_array.outputs:array>
+            prepend token[] inputs:jointNames.connect = [
+                </World/ActionGraph/make_array.outputs:array>,
+                </terrain/RoverController/make_array.outputs:array>,
+            ]
             custom double[] inputs:positionCommand = []
-            prepend double[] inputs:positionCommand.connect = </terrain/RoverController/rover_base_controller.outputs:steer_command>
+            delete double[] inputs:positionCommand.connect = </terrain/RoverController/rover_base_controller.outputs:steer_command>
+            prepend double[] inputs:positionCommand.connect = [
+                </World/ActionGraph/rover_base_controller.outputs:steer_command>,
+                </terrain/RoverController/rover_base_controller.outputs:steer_command>,
+            ]
             custom string inputs:robotPath = ""
             custom rel inputs:targetPrim
+            delete rel inputs:targetPrim = </World/Mars_Rover>
             prepend rel inputs:targetPrim = </terrain/Mars_Rover>
             custom bool inputs:usePath = 0
             custom double[] inputs:velocityCommand = []
             token node:type = "omni.isaac.core_nodes.IsaacArticulationController"
             int node:typeVersion = 1
             uniform token ui:nodegraph:node:expansionState = "open"
-            uniform float2 ui:nodegraph:node:pos = (783.88135, -652.1596)
+            uniform float2 ui:nodegraph:node:pos = (984.6291, -581.8278)
         }
 
         def OmniGraphNode "constant_token" (
@@ -4843,8 +4855,14 @@ def Xform "terrain"
                 allowedTokens = ["auto", "bool[]", "double[]", "float[]", "half[]", "int[]", "int64[]", "token[]", "uchar[]", "uint[]", "uint64[]", "double[2][]", "double[3][]", "double[4][]", "matrixd[3][]", "matrixd[4][]", "float[2][]", "float[3][]", "float[4][]", "half[2][]", "half[3][]", "half[4][]", "int[2][]", "int[3][]", "int[4][]"]
             )
             custom token inputs:input0
-            delete token inputs:input0.connect = </terrain/RoverController/constant_token.inputs:value>
-            prepend token inputs:input0.connect = </terrain/RoverController/constant_token.inputs:value>
+            delete token inputs:input0.connect = [
+                </World/ActionGraph/constant_token.inputs:value>,
+                </terrain/RoverController/constant_token.inputs:value>,
+            ]
+            prepend token inputs:input0.connect = [
+                </World/ActionGraph/constant_token.inputs:value>,
+                </terrain/RoverController/constant_token.inputs:value>,
+            ]
             custom token inputs:input1 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -4855,8 +4873,11 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input1.connect = </terrain/RoverController/constant_token_01.inputs:value>
-            prepend token inputs:input1.connect = </terrain/RoverController/constant_token_01.inputs:value>
+            delete token inputs:input1.connect = </World/ActionGraph/constant_token_01.inputs:value>
+            prepend token inputs:input1.connect = [
+                </World/ActionGraph/constant_token_01.inputs:value>,
+                </terrain/RoverController/constant_token_01.inputs:value>,
+            ]
             custom token inputs:input2 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -4867,8 +4888,11 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input2.connect = </terrain/RoverController/constant_token_02.inputs:value>
-            prepend token inputs:input2.connect = </terrain/RoverController/constant_token_02.inputs:value>
+            delete token inputs:input2.connect = </World/ActionGraph/constant_token_02.inputs:value>
+            prepend token inputs:input2.connect = [
+                </World/ActionGraph/constant_token_02.inputs:value>,
+                </terrain/RoverController/constant_token_02.inputs:value>,
+            ]
             custom token inputs:input3 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -4879,13 +4903,16 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input3.connect = </terrain/RoverController/constant_token_03.inputs:value>
-            prepend token inputs:input3.connect = </terrain/RoverController/constant_token_03.inputs:value>
+            delete token inputs:input3.connect = </World/ActionGraph/constant_token_03.inputs:value>
+            prepend token inputs:input3.connect = [
+                </World/ActionGraph/constant_token_03.inputs:value>,
+                </terrain/RoverController/constant_token_03.inputs:value>,
+            ]
             token node:type = "omni.graph.nodes.ConstructArray"
             int node:typeVersion = 1
             custom token outputs:array
             uniform token ui:nodegraph:node:expansionState = "open"
-            uniform float2 ui:nodegraph:node:pos = (276.19037, -669.1424)
+            uniform float2 ui:nodegraph:node:pos = (573.30615, -649.0475)
         }
 
         def OmniGraphNode "rover_base_controller" (
@@ -4893,9 +4920,15 @@ def Xform "terrain"
         )
         {
             custom double inputs:ang_vel = 0
-            prepend double inputs:ang_vel.connect = </terrain/RoverController/break_3_vector.outputs:z>
+            prepend double inputs:ang_vel.connect = [
+                </World/ActionGraph/break_3_vector.outputs:z>,
+                </terrain/RoverController/break_3_vector.outputs:z>,
+            ]
             custom double inputs:lin_vel = -2
-            prepend double inputs:lin_vel.connect = </terrain/RoverController/break_3_vector_01.outputs:x>
+            prepend double inputs:lin_vel.connect = [
+                </World/ActionGraph/break_3_vector_01.outputs:x>,
+                </terrain/RoverController/break_3_vector_01.outputs:x>,
+            ]
             token node:type = "aau.rover.base_controller2.RoverBaseController"
             int node:typeVersion = 1
             custom double[] outputs:steer_command = []
@@ -4979,8 +5012,14 @@ def Xform "terrain"
                 allowedTokens = ["auto", "bool[]", "double[]", "float[]", "half[]", "int[]", "int64[]", "token[]", "uchar[]", "uint[]", "uint64[]", "double[2][]", "double[3][]", "double[4][]", "matrixd[3][]", "matrixd[4][]", "float[2][]", "float[3][]", "float[4][]", "half[2][]", "half[3][]", "half[4][]", "int[2][]", "int[3][]", "int[4][]"]
             )
             custom token inputs:input0
-            delete token inputs:input0.connect = </terrain/RoverController/constant_token_04.inputs:value>
-            prepend token inputs:input0.connect = </terrain/RoverController/constant_token_04.inputs:value>
+            delete token inputs:input0.connect = [
+                </World/ActionGraph/constant_token_04.inputs:value>,
+                </terrain/RoverController/constant_token_04.inputs:value>,
+            ]
+            prepend token inputs:input0.connect = [
+                </World/ActionGraph/constant_token_04.inputs:value>,
+                </terrain/RoverController/constant_token_04.inputs:value>,
+            ]
             custom token inputs:input1 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -4991,8 +5030,11 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input1.connect = </terrain/RoverController/constant_token_05.inputs:value>
-            prepend token inputs:input1.connect = </terrain/RoverController/constant_token_05.inputs:value>
+            delete token inputs:input1.connect = </World/ActionGraph/constant_token_05.inputs:value>
+            prepend token inputs:input1.connect = [
+                </World/ActionGraph/constant_token_05.inputs:value>,
+                </terrain/RoverController/constant_token_05.inputs:value>,
+            ]
             custom token inputs:input2 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -5003,8 +5045,11 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input2.connect = </terrain/RoverController/constant_token_06.inputs:value>
-            prepend token inputs:input2.connect = </terrain/RoverController/constant_token_06.inputs:value>
+            delete token inputs:input2.connect = </World/ActionGraph/constant_token_06.inputs:value>
+            prepend token inputs:input2.connect = [
+                </World/ActionGraph/constant_token_06.inputs:value>,
+                </terrain/RoverController/constant_token_06.inputs:value>,
+            ]
             custom token inputs:input3 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -5015,8 +5060,11 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input3.connect = </terrain/RoverController/constant_token_07.inputs:value>
-            prepend token inputs:input3.connect = </terrain/RoverController/constant_token_07.inputs:value>
+            delete token inputs:input3.connect = </World/ActionGraph/constant_token_07.inputs:value>
+            prepend token inputs:input3.connect = [
+                </World/ActionGraph/constant_token_07.inputs:value>,
+                </terrain/RoverController/constant_token_07.inputs:value>,
+            ]
             custom token inputs:input4 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -5027,8 +5075,11 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input4.connect = </terrain/RoverController/constant_token_08.inputs:value>
-            prepend token inputs:input4.connect = </terrain/RoverController/constant_token_08.inputs:value>
+            delete token inputs:input4.connect = </World/ActionGraph/constant_token_08.inputs:value>
+            prepend token inputs:input4.connect = [
+                </World/ActionGraph/constant_token_08.inputs:value>,
+                </terrain/RoverController/constant_token_08.inputs:value>,
+            ]
             custom token inputs:input5 (
                 customData = {
                     string ExtendedAttributeType = "Any"
@@ -5039,35 +5090,16 @@ def Xform "terrain"
                     }
                 }
             )
-            delete token inputs:input5.connect = </terrain/RoverController/constant_token_09.inputs:value>
-            prepend token inputs:input5.connect = </terrain/RoverController/constant_token_09.inputs:value>
+            delete token inputs:input5.connect = </World/ActionGraph/constant_token_09.inputs:value>
+            prepend token inputs:input5.connect = [
+                </World/ActionGraph/constant_token_09.inputs:value>,
+                </terrain/RoverController/constant_token_09.inputs:value>,
+            ]
             token node:type = "omni.graph.nodes.ConstructArray"
             int node:typeVersion = 1
             custom token outputs:array
             uniform token ui:nodegraph:node:expansionState = "open"
-            uniform float2 ui:nodegraph:node:pos = (322.3346, -352.84842)
-        }
-
-        def OmniGraphNode "articulation_controller_01" (
-            prepend apiSchemas = ["NodeGraphNodeAPI"]
-        )
-        {
-            custom double[] inputs:effortCommand = []
-            custom uint inputs:execIn
-            prepend uint inputs:execIn.connect = </terrain/RoverController/on_playback_tick.outputs:tick>
-            custom int[] inputs:jointIndices = []
-            custom token[] inputs:jointNames = []
-            prepend token[] inputs:jointNames.connect = </terrain/RoverController/make_array_01.outputs:array>
-            custom double[] inputs:positionCommand = []
-            custom string inputs:robotPath = ""
-            custom rel inputs:targetPrim = </terrain/Mars_Rover>
-            custom bool inputs:usePath = 0
-            custom double[] inputs:velocityCommand = []
-            prepend double[] inputs:velocityCommand.connect = </terrain/RoverController/rover_base_controller.outputs:velocity_command>
-            token node:type = "omni.isaac.core_nodes.IsaacArticulationController"
-            int node:typeVersion = 1
-            uniform token ui:nodegraph:node:expansionState = "open"
-            uniform float2 ui:nodegraph:node:pos = (830.3697, -337.22745)
+            uniform float2 ui:nodegraph:node:pos = (355.34747, -327.0123)
         }
 
         def OmniGraphNode "ros2_context" (
@@ -5088,9 +5120,15 @@ def Xform "terrain"
         )
         {
             custom uint64 inputs:context = 0
-            prepend uint64 inputs:context.connect = </terrain/RoverController/ros2_context.outputs:context>
+            prepend uint64 inputs:context.connect = [
+                </World/ActionGraph/ros2_context.outputs:context>,
+                </terrain/RoverController/ros2_context.outputs:context>,
+            ]
             custom uint inputs:execIn
-            prepend uint inputs:execIn.connect = </terrain/RoverController/on_playback_tick.outputs:tick>
+            prepend uint inputs:execIn.connect = [
+                </World/ActionGraph/on_playback_tick.outputs:tick>,
+                </terrain/RoverController/on_playback_tick.outputs:tick>,
+            ]
             custom string inputs:nodeNamespace = ""
             custom uint64 inputs:queueSize = 10
             custom string inputs:topicName = "cmd_vel"
@@ -5112,7 +5150,10 @@ def Xform "terrain"
         )
         {
             custom token inputs:tuple
-            prepend token inputs:tuple.connect = </terrain/RoverController/ros2_subscribe_twist.outputs:angularVelocity>
+            prepend token inputs:tuple.connect = [
+                </World/ActionGraph/ros2_subscribe_twist.outputs:angularVelocity>,
+                </terrain/RoverController/ros2_subscribe_twist.outputs:angularVelocity>,
+            ]
             token node:type = "omni.graph.nodes.BreakVector3"
             int node:typeVersion = 1
             custom token outputs:x
@@ -5127,7 +5168,10 @@ def Xform "terrain"
         )
         {
             custom token inputs:tuple
-            prepend token inputs:tuple.connect = </terrain/RoverController/ros2_subscribe_twist.outputs:linearVelocity>
+            prepend token inputs:tuple.connect = [
+                </World/ActionGraph/ros2_subscribe_twist.outputs:linearVelocity>,
+                </terrain/RoverController/ros2_subscribe_twist.outputs:linearVelocity>,
+            ]
             token node:type = "omni.graph.nodes.BreakVector3"
             int node:typeVersion = 1
             custom token outputs:x
@@ -5135,6 +5179,29 @@ def Xform "terrain"
             custom token outputs:z
             uniform token ui:nodegraph:node:expansionState = "open"
             uniform float2 ui:nodegraph:node:pos = (353.86008, 195.23007)
+        }
+
+        def OmniGraphNode "articulation_controller_02" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom double[] inputs:effortCommand = []
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </terrain/RoverController/ros2_subscribe_twist.outputs:execOut>
+            custom int[] inputs:jointIndices = []
+            custom token[] inputs:jointNames = []
+            prepend token[] inputs:jointNames.connect = </terrain/RoverController/make_array_01.outputs:array>
+            custom double[] inputs:positionCommand = []
+            custom string inputs:robotPath = ""
+            custom rel inputs:targetPrim
+            prepend rel inputs:targetPrim = </terrain/Mars_Rover>
+            custom bool inputs:usePath = 1
+            custom double[] inputs:velocityCommand = []
+            prepend double[] inputs:velocityCommand.connect = </terrain/RoverController/rover_base_controller.outputs:velocity_command>
+            token node:type = "omni.isaac.core_nodes.IsaacArticulationController"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (991.386, -61.484253)
         }
     }
 }
