@@ -60,3 +60,6 @@ Inside the folder terrain_generation you can find a blender project which can be
 When a terrain has been generated, all big rocks are automatically selected, export this as the big_rock_layer that is needed for the collision detection inside the simulation. Then select the whole terrain (all stones and the base terrain) and export is as well. We import the files as ply in IsaacSim, if there are problems exporting into ply, export into fbx and then use a converter.
 
 Apart from the terrain there is also the stone_info file that you need to put into the terrain folder of the simulation. This is used for the spawn and goal validation.
+# Contact
+For other questions feel free to contact:
+* Anton Bjørndahl Mortensen: antonbm2008@gmail.com
