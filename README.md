@@ -13,21 +13,15 @@ This repository contains a reinforcement learning implementation in Isaac Sim 20
 ![12](https://user-images.githubusercontent.com/56405924/200193231-ff1713ef-f4f9-46c4-8d7d-28ef6c3dc83d.JPG)
 **Reinforcement Learning**
 
-https://user-images.githubusercontent.com/56405924/204378992-13709e09-ca9a-4aa7-b76d-eb012e801e02.mp4
+https://github.com/user-attachments/assets/93237c35-daeb-4198-b371-11d1ec10da5e
 
-https://user-images.githubusercontent.com/56405924/204389953-d40bbcf7-2219-49d9-8480-07725625d674.mp4
+https://github.com/user-attachments/assets/dfd2dd97-ff95-4df3-a4bb-f6144375ec08
 
 **Terrain**
 
+https://github.com/user-attachments/assets/22ded8e6-47b7-4fcd-9151-81e6b76d2aa1
 
-https://user-images.githubusercontent.com/56405924/212775394-6bf902e0-1161-42c6-aa53-8a0d6f10f324.mp4
-
-
-
-https://user-images.githubusercontent.com/56405924/212775747-afaa91c2-4a10-458d-8b66-d3fbc30e07b0.mp4
-
-
-
+https://github.com/user-attachments/assets/d30ff35d-84cd-48bb-868c-2aa387d5c8fa
 
 # Setup
 1. Install [Isaac Sim](https://developer.nvidia.com/isaac-sim)
